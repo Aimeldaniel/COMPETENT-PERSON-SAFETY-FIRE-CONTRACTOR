@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <title>Sistem Competent Person Fire Safety Contractor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .sidebar { min-height: 100vh; background: #0f172a; color: white; }
+    .sidebar .nav-link { color: #94a3b8; margin-bottom: 5px; border-radius: 6px; }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { background: #0284c7; color: white; }
+    .card-custom { border: none; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .badge-draf { background-color: #64748b; }
+    .badge-proses { background-color: #d97706; }
+    .badge-lulus1 { background-color: #2563eb; }
+    .badge-lulus2 { background-color: #7c3aed; }
+    .badge-bayar { background-color: #c026d3; }
+    .badge-lulus { background-color: #16a34a; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- AUTH SECTION (LOGIN / REGISTER) -->
+  <div id="authSection" class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-5">
+        <div class="card card-custom p-4 bg-white">
+          <div class="text-center mb-4">
+            <i class="bi bi-shield-lock-fill text-primary display-4"></i>
+            <h4 class="fw-bold mt-2">Sistem Competent Person</h4>
+            <p class="text-muted small">Fire Safety Contractor Registration</p>
+          </div>
+
+          <!-- LOGIN FORM -->
+          <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="mb-3">
+              <label class="form-label">Alamat Emel</label>
+              <input type="email" id="loginEmail" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Kata Laluan</label>
+              <input type="password" id="loginPassword" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2">Log Masuk</button>
+            <div class="text-center mt-3">
+              <a href="#" onclick="toggleAuth('register')" class="text-decoration-none small">Belum ada akaun? Daftar Awam</a>
+            </div>
+          </form>
+
+          <!-- REGISTER FORM -->
+          <form id="registerForm" style="display:none;" onsubmit="handleRegister(event)">
+            <div class="mb-2">
+              <label class="form-label">Nama Penuh</label>
+              <input type="text" id="regName" class="form-control" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">No. Kad Pengenalan</label>
+              <input type="text" id="regIc" class="form-control" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Emel</label>
+              <input type="email" id="regEmail" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Kata Laluan</label>
+              <input type="password" id="regPass" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100 py-2">Daftar Akaun Awam</button>
+            <div class="text-center mt-3">
+              <a href="#" onclick="toggleAuth('login')" class="text-decoration-none small">Sudah ada akaun? Log Masuk</a>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD SYSTEM -->
+  <div id="mainDashboard" style="display:none;" class="container-fluid">
+    <div class="row">
+      <!-- SIDEBAR -->
+      <div class="col-md-3 col-lg-2 sidebar p-3">
+        <h5 class="fw-bold mb-4 text-white"><i class="bi bi-fire text-danger me-2"></i>FireSafety CP</h5>
+        <p class="small text-muted mb-3" id="userRoleBadge">Role: Awam</p>
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link active" href="#" onclick="switchTab('dashboard')"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+          </li>
+          <li class="nav-item" id="menuPermohonan">
+            <a class="nav-link" href="#" onclick="switchTab('permohonan')"><i class="bi bi-file-earmark-plus me-2"></i>Permohonan Baru</a>
+          </li>
+          <li class="nav-item" id="menuAdminPegawai" style="display:none;">
+            <a class="nav-link" href="#" onclick="switchTab('adminPegawai')"><i class="bi bi-person-plus me-2"></i>Daftar Pegawai</a>
+          </li>
+          <li class="nav-item mt-4">
+            <a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Log Keluar</a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- MAIN CONTENT -->
+      <div class="col-md-9 col-lg-10 p-4">
+        
+        <!-- DASHBOARD TAB -->
+        <div id="tabDashboard">
+          <h4 class="fw-bold mb-3">Semak Status Permohonan</h4>
+          <div class="card card-custom p-3 bg-white">
+            <table class="table table-hover align-middle">
+              <thead class="table-dark">
+                <tr>
+                  <th>No. Permohonan</th>
+                  <th>Pemohon</th>
+                  <th>Tarikh</th>
+                  <th>Status</th>
+                  <th>Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="applicationTableBody">
+                <!-- Dynamic Data -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PERMOHONAN FORM TAB -->
+        <div id="tabPermohonan" style="display:none;">
+          <h4 class="fw-bold mb-3">Borang Permohonan Competent Person</h4>
+          <form id="formApp" onsubmit="handleFormSubmit(event, false)">
+            
+            <!-- MAKLUMAT PEMOHON -->
+            <div class="card card-custom p-4 bg-white mb-4">
+              <h5 class="fw-bold border-bottom pb-2">1. Maklumat Pemohon</h5>
+              <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                  <label class="form-label">Nama Penuh</label>
+                  <input type="text" id="appFullName" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">No. Kad Pengenalan / Passport</label>
+                  <input type="text" id="appIcNo" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Muat Naik Kad Pengenalan (IC)</label>
+                  <input type="file" id="appFileIc" class="form-control" accept="image/*,application/pdf">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Jantina</label>
+                  <select id="appGender" class="form-select"><option>Lelaki</option><option>Perempuan</option></select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label">Tarikh Lahir</label>
+                  <input type="date" id="appDob" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">No. Telefon Bimbit</label>
+                  <input type="text" id="appPhone" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Alamat Surat-Menyurat</label>
+                  <textarea id="appAddress" class="form-rows-2 form-control" required></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- KATEGORI PERAKUAN -->
+            <div class="card card-custom p-4 bg-white mb-4">
+              <h5 class="fw-bold border-bottom pb-2">2. Kategori Perakuan Orang Kompeten</h5>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="catMekanikal">
+                <label class="form-check-label fw-semibold">Mekanikal atau Elektrikal</label>
+                <div class="ms-4 mt-1">
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subGendela"><label class="form-check-label">Penutup gendela gulung kebakaran</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subPenggera"><label class="form-check-label">Panel penggera kebakaran</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subPam"><label class="form-check-label">Pam sistem menentang kebakaran</label></div>
+                </div>
+              </div>
+
+              <div class="form-check mt-3">
+                <input class="form-check-input" type="checkbox" id="catAwam">
+                <label class="form-check-label fw-semibold">Awam atau Struktur</label>
+              </div>
+
+              <div class="form-check mt-3">
+                <input class="form-check-input" type="checkbox" id="catPemasangan">
+                <label class="form-check-label fw-semibold">Pemasangan Tetap atau Mudah Alih</label>
+                <div class="ms-4 mt-1">
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subGas"><label class="form-check-label">Sistem pemadaman kebakaran (Gas)</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subPemadamApi"><label class="form-check-label">Alat pemadam api</label></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- KELAYAKAN AKADEMIK -->
+            <div class="card card-custom p-4 bg-white mb-4">
+              <h5 class="fw-bold border-bottom pb-2">3. Kelayakan Akademik & Lampiran Sijil</h5>
+              <p class="small text-muted">Sijil SPM adalah <strong>Wajib</strong>. Diploma, Ijazah, Master, PhD adalah pilihan (Option).</p>
+              
+              <div class="row g-2 mb-2 align-items-center">
+                <div class="col-md-2"><span class="fw-bold">SPM (Wajib)</span></div>
+                <div class="col-md-4"><input type="text" id="spmInst" class="form-control" placeholder="Nama Sekolah / Institusi" required></div>
+                <div class="col-md-2"><input type="number" id="spmYear" class="form-control" placeholder="Tahun" required></div>
+                <div class="col-md-4"><input type="file" id="spmFile" class="form-control" required></div>
+              </div>
+
+              <div class="row g-2 mb-2 align-items-center">
+                <div class="col-md-2"><span class="fw-bold">Diploma / Ijazah / Lain-lain</span></div>
+                <div class="col-md-4"><input type="text" id="higherInst" class="form-control" placeholder="Universiti / Kolej"></div>
+                <div class="col-md-2"><input type="number" id="higherYear" class="form-control" placeholder="Tahun"></div>
+                <div class="col-md-4"><input type="file" id="higherFile" class="form-control"></div>
+              </div>
+
+              <hr>
+              <h6>Sijil Latihan Kompetensi (Placeholder Attachments):</h6>
+              <div class="row g-2">
+                <div class="col-md-6"><label class="form-label">Sijil Latihan 1</label><input type="file" id="cert1File" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Sijil Latihan 2</label><input type="file" id="cert2File" class="form-control"></div>
+              </div>
+            </div>
+
+            <!-- PENGALAMAN KERJA (5 KOLUM) -->
+            <div class="card card-custom p-4 bg-white mb-4">
+              <h5 class="fw-bold border-bottom pb-2">4. Senarai Pengalaman Kerja & Surat Majikan</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Nama Syarikat & Jawatan</th>
+                      <th>Keterangan Ringkas Pengalaman</th>
+                      <th>Tahun Mula</th>
+                      <th>Tahun Akhir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><input type="text" class="form-control exp-company"></td>
+                      <td><input type="text" class="form-control exp-desc"></td>
+                      <td><input type="text" class="form-control exp-start"></td>
+                      <td><input type="text" class="form-control exp-end"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="mt-3">
+                <label class="form-label fw-bold">Surat Pengesahan Pengalaman Kerja oleh Majikan</label>
+                <input type="file" id="employerLetterFile" class="form-control">
+              </div>
+            </div>
+
+            <!-- BUTTON ACTIONS -->
+            <div class="d-flex gap-2 mb-5">
+              <button type="button" class="btn btn-secondary px-4" onclick="handleFormSubmit(event, true)">Simpan Draf</button>
+              <button type="submit" class="btn btn-primary px-5">Hantar Permohonan</button>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- ADMIN REGISTER PEGAWAI TAB -->
+        <div id="tabAdminPegawai" style="display:none;">
+          <h4 class="fw-bold mb-3">Daftar Pegawai Lulus (Admin Sahaja)</h4>
+          <div class="card card-custom p-4 bg-white col-md-6">
+            <form onsubmit="handleAdminRegisterPegawai(event)">
+              <div class="mb-2">
+                <label class="form-label">Nama Pegawai</label>
+                <input type="text" id="pegName" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">No. Kad Pengenalan</label>
+                <input type="text" id="pegIc" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Emel Rasmi</label>
+                <input type="email" id="pegEmail" class="form-control" required>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Kata Laluan</label>
+                <input type="password" id="pegPass" class="form-control" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Peranan / Role</label>
+                <select id="pegRole" class="form-select">
+                  <option value="pegawai_1">Pegawai Lulus 1 (Semakan)</option>
+                  <option value="pegawai_2">Pegawai Lulus 2 (Kelulusan)</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary w-100">Daftar Pegawai</button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BUKTI PEMBAYARAN -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Muat Naik Resit Pembayaran</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="payAppId">
+        <p class="small text-muted">Permohonan anda telah diluluskan pada peringkat 2. Sila muat naik resit bagi proses kelulusan akhir.</p>
+        <div class="mb-3">
+          <label class="form-label">Resit Pembayaran (PDF/Image)</label>
+          <input type="file" id="payReceiptFile" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="submitPayment()">Hantar Resit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JS LIBRARIES -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let currentUser = null;
+
+  function toggleAuth(type) {
+    if(type === 'register') {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'block';
+    } else {
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('registerForm').style.display = 'none';
+    }
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const pass = document.getElementById('loginPassword').value;
+
+    google.script.run.withSuccessHandler(res => {
+      if(res.success) {
+        currentUser = res.user;
+        initDashboard();
+      } else {
+        alert(res.message);
+      }
+    }).loginUser(email, pass);
+  }
+
+  function handleRegister(e) {
+    e.preventDefault();
+    const data = {
+      fullName: document.getElementById('regName').value,
+      icNo: document.getElementById('regIc').value,
+      email: document.getElementById('regEmail').value,
+      password: document.getElementById('regPass').value,
+      role: 'awam'
+    };
+
+    google.script.run.withSuccessHandler(res => {
+      alert(res.message);
+      if(res.success) toggleAuth('login');
+    }).registerUser(data);
+  }
+
+  function initDashboard() {
+    document.getElementById('authSection').style.display = 'none';
+    document.getElementById('mainDashboard').style.display = 'block';
+    document.getElementById('userRoleBadge').innerText = `Pengguna: ${currentUser.name} (${currentUser.role.toUpperCase()})`;
+
+    if(currentUser.role === 'admin') {
+      document.getElementById('menuAdminPegawai').style.display = 'block';
+    } else {
+      document.getElementById('menuAdminPegawai').style.display = 'none';
+    }
+
+    if(currentUser.role !== 'awam') {
+      document.getElementById('menuPermohonan').style.display = 'none';
+    }
+
+    loadApplications();
+  }
+
+  function loadApplications() {
+    google.script.run.withSuccessHandler(data => {
+      const tbody = document.getElementById('applicationTableBody');
+      tbody.innerHTML = '';
+
+      data.forEach(item => {
+        let badgeClass = 'badge-draf';
+        if(item.status === 'Dalam Proses') badgeClass = 'badge-proses';
+        if(item.status === 'Kelulusan Pertama') badgeClass = 'badge-lulus1';
+        if(item.status === 'Kelulusan Kedua') badgeClass = 'badge-lulus2';
+        if(item.status === 'Dalam Pembayaran') badgeClass = 'badge-bayar';
+        if(item.status === 'Lulus Sepenuhnya') badgeClass = 'badge-lulus';
+
+        let actionBtns = '';
+        if(currentUser.role === 'pegawai_1' && item.status === 'Dalam Proses') {
+          actionBtns = `<button class="btn btn-sm btn-primary" onclick="approveApp('${item.appId}', 'Kelulusan Pertama', 'pegawai_1')">Perakukan</button>`;
+        } else if(currentUser.role === 'pegawai_2' && item.status === 'Kelulusan Pertama') {
+          actionBtns = `<button class="btn btn-sm btn-success" onclick="approveApp('${item.appId}', 'Kelulusan Kedua', 'pegawai_2')">Luluskan</button>`;
+        } else if((currentUser.role === 'pegawai_1' || currentUser.role === 'pegawai_2') && item.status === 'Dalam Pembayaran') {
+          actionBtns = `<button class="btn btn-sm btn-success" onclick="approveApp('${item.appId}', 'Lulus Sepenuhnya', '${currentUser.role}')">Sahkan Bayaran & Lulus</button>`;
+        } else if(currentUser.role === 'awam' && item.status === 'Kelulusan Kedua') {
+          actionBtns = `<button class="btn btn-sm btn-warning" onclick="openPaymentModal('${item.appId}')">Bayar Sekarang</button>`;
+        }
+
+        if(item.status === 'Lulus Sepenuhnya' && item.certUrl) {
+          actionBtns += ` <a href="${item.certUrl}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-download"></i> Sijil</a>`;
+        }
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${item.appId}</strong></td>
+            <td>${item.fullName}<br><small class="text-muted">${item.userEmail}</small></td>
+            <td>${new Date(item.createdAt).toLocaleDateString()}</td>
+            <td><span class="badge ${badgeClass}">${item.status}</span></td>
+            <td>${actionBtns}</td>
+          </tr>
+        `;
+      });
+    }).getApplicationsForRole(currentUser.email, currentUser.role);
+  }
+
+  function approveApp(appId, newStatus, role) {
+    const review = prompt("Masukkan ulasan / ulasan semakan:");
+    if(review !== null) {
+      google.script.run.withSuccessHandler(res => {
+        alert(res.message);
+        loadApplications();
+      }).processApproval(appId, newStatus, review, role);
+    }
+  }
+
+  function openPaymentModal(appId) {
+    document.getElementById('payAppId').value = appId;
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+  }
+
+  async function submitPayment() {
+    const appId = document.getElementById('payAppId').value;
+    const fileInput = document.getElementById('payReceiptFile');
+    if(!fileInput.files[0]) return alert('Sila pilih fail resit!');
+
+    const base64 = await toBase64(fileInput.files[0]);
+    google.script.run.withSuccessHandler(res => {
+      alert(res.message);
+      bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+      loadApplications();
+    }).submitPaymentReceipt(appId, base64);
+  }
+
+  function switchTab(tab) {
+    document.getElementById('tabDashboard').style.display = (tab === 'dashboard') ? 'block' : 'none';
+    document.getElementById('tabPermohonan').style.display = (tab === 'permohonan') ? 'block' : 'none';
+    document.getElementById('tabAdminPegawai').style.display = (tab === 'adminPegawai') ? 'block' : 'none';
+  }
+
+  function handleAdminRegisterPegawai(e) {
+    e.preventDefault();
+    const data = {
+      fullName: document.getElementById('pegName').value,
+      icNo: document.getElementById('pegIc').value,
+      email: document.getElementById('pegEmail').value,
+      password: document.getElementById('pegPass').value,
+      role: document.getElementById('pegRole').value
+    };
+
+    google.script.run.withSuccessHandler(res => {
+      alert(res.message);
+      if(res.success) e.target.reset();
+    }).registerUser(data);
+  }
+
+  async function handleFormSubmit(e, isDraft) {
+    if(e) e.preventDefault();
+
+    const icFile = document.getElementById('appFileIc').files[0];
+    const cert1File = document.getElementById('cert1File').files[0];
+    const cert2File = document.getElementById('cert2File').files[0];
+    const employerFile = document.getElementById('employerLetterFile').files[0];
+
+    const payload = {
+      email: currentUser.email,
+      fullName: document.getElementById('appFullName').value,
+      icNo: document.getElementById('appIcNo').value,
+      gender: document.getElementById('appGender').value,
+      dob: document.getElementById('appDob').value,
+      phone: document.getElementById('appPhone').value,
+      address: document.getElementById('appAddress').value,
+      isDraft: isDraft,
+      categoryData: {
+        mekanikal: document.getElementById('catMekanikal').checked,
+        gendela: document.getElementById('subGendela').checked,
+        penggera: document.getElementById('subPenggera').checked,
+        pam: document.getElementById('subPam').checked,
+        awam: document.getElementById('catAwam').checked,
+        pemasangan: document.getElementById('catPemasangan').checked,
+        gas: document.getElementById('subGas').checked,
+        pemadamApi: document.getElementById('subPemadamApi').checked
+      },
+      academicData: {
+        spm: { inst: document.getElementById('spmInst').value, year: document.getElementById('spmYear').value },
+        higher: { inst: document.getElementById('higherInst').value, year: document.getElementById('higherYear').value }
+      },
+      icFileBase64: icFile ? await toBase64(icFile) : null,
+      cert1Base64: cert1File ? await toBase64(cert1File) : null,
+      cert2Base64: cert2File ? await toBase64(cert2File) : null,
+      employerLetterBase64: employerFile ? await toBase64(employerFile) : null
+    };
+
+    google.script.run.withSuccessHandler(res => {
+      alert(res.message);
+      if(res.success) {
+        switchTab('dashboard');
+        loadApplications();
+      }
+    }).submitApplication(payload);
+  }
+
+  const toBase64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+
+  function logout() {
+    currentUser = null;
+    document.getElementById('mainDashboard').style.display = 'none';
+    document.getElementById('authSection').style.display = 'block';
+  }
+</script>
+</body>
+</html>
