@@ -213,32 +213,38 @@
               </div>
 
               <hr>
-              <h6>Sijil Latihan Kompetensi (Placeholder Attachments):</h6>
+              <h6>Sijil Latihan Kompetensi:</h6>
               <div class="row g-2">
                 <div class="col-md-6"><label class="form-label">Sijil Latihan 1</label><input type="file" id="cert1File" class="form-control"></div>
                 <div class="col-md-6"><label class="form-label">Sijil Latihan 2</label><input type="file" id="cert2File" class="form-control"></div>
               </div>
             </div>
 
-            <!-- PENGALAMAN KERJA (5 KOLUM) -->
+            <!-- PENGALAMAN KERJA (DINAMIK BARIS) -->
             <div class="card card-custom p-4 bg-white mb-4">
-              <h5 class="fw-bold border-bottom pb-2">4. Senarai Pengalaman Kerja & Surat Majikan</h5>
+              <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                <h5 class="fw-bold m-0">4. Senarai Pengalaman Kerja & Surat Majikan</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addWorkRow()"><i class="bi bi-plus-circle me-1"></i>Tambah Pengalaman</button>
+              </div>
+              
               <div class="table-responsive">
-                <table class="table table-bordered align-middle">
+                <table class="table table-bordered align-middle" id="workTable">
                   <thead class="table-light">
                     <tr>
                       <th>Nama Syarikat & Jawatan</th>
                       <th>Keterangan Ringkas Pengalaman</th>
                       <th>Tahun Mula</th>
                       <th>Tahun Akhir</th>
+                      <th style="width: 50px;">Aksi</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody id="workTableBody">
                     <tr>
-                      <td><input type="text" class="form-control exp-company"></td>
-                      <td><input type="text" class="form-control exp-desc"></td>
-                      <td><input type="text" class="form-control exp-start"></td>
-                      <td><input type="text" class="form-control exp-end"></td>
+                      <td><input type="text" class="form-control exp-company" required></td>
+                      <td><input type="text" class="form-control exp-desc" required></td>
+                      <td><input type="text" class="form-control exp-start" placeholder="YYYY" required></td>
+                      <td><input type="text" class="form-control exp-end" placeholder="YYYY / Present" required></td>
+                      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWorkRow(this)"><i class="bi bi-trash"></i></button></td>
                     </tr>
                   </tbody>
                 </table>
@@ -380,6 +386,11 @@
 
     if(currentUser.role !== 'awam') {
       document.getElementById('menuPermohonan').style.display = 'none';
+    } else {
+      document.getElementById('menuPermohonan').style.display = 'block';
+      // Auto-fill nama & ic dari akaun pengguna
+      document.getElementById('appFullName').value = currentUser.name || '';
+      document.getElementById('appIcNo').value = currentUser.ic || '';
     }
 
     loadApplications();
@@ -389,6 +400,11 @@
     google.script.run.withSuccessHandler(data => {
       const tbody = document.getElementById('applicationTableBody');
       tbody.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Tiada permohonan dijumpai.</td></tr>';
+        return;
+      }
 
       data.forEach(item => {
         let badgeClass = 'badge-draf';
@@ -409,6 +425,7 @@
           actionBtns = `<button class="btn btn-sm btn-warning" onclick="openPaymentModal('${item.appId}')">Bayar Sekarang</button>`;
         }
 
+        // Pautan Sijil
         if(item.status === 'Lulus Sepenuhnya' && item.certUrl) {
           actionBtns += ` <a href="${item.certUrl}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-download"></i> Sijil</a>`;
         }
@@ -460,6 +477,28 @@
     document.getElementById('tabAdminPegawai').style.display = (tab === 'adminPegawai') ? 'block' : 'none';
   }
 
+  function addWorkRow() {
+    const tbody = document.getElementById('workTableBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="form-control exp-company"></td>
+      <td><input type="text" class="form-control exp-desc"></td>
+      <td><input type="text" class="form-control exp-start" placeholder="YYYY"></td>
+      <td><input type="text" class="form-control exp-end" placeholder="YYYY / Present"></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWorkRow(this)"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function removeWorkRow(btn) {
+    const row = btn.closest('tr');
+    if (document.querySelectorAll('#workTableBody tr').length > 1) {
+      row.remove();
+    } else {
+      alert('Sekurang-kurangnya satu baris pengalaman kerja diperlukan.');
+    }
+  }
+
   function handleAdminRegisterPegawai(e) {
     e.preventDefault();
     const data = {
@@ -484,6 +523,18 @@
     const cert2File = document.getElementById('cert2File').files[0];
     const employerFile = document.getElementById('employerLetterFile').files[0];
 
+    // Ambil Data Pengalaman Kerja dari Jadual Dinamik
+    const workExpData = [];
+    document.querySelectorAll('#workTableBody tr').forEach(tr => {
+      const company = tr.querySelector('.exp-company').value;
+      const desc = tr.querySelector('.exp-desc').value;
+      const start = tr.querySelector('.exp-start').value;
+      const end = tr.querySelector('.exp-end').value;
+      if (company || desc) {
+        workExpData.push({ company, desc, start, end });
+      }
+    });
+
     const payload = {
       email: currentUser.email,
       fullName: document.getElementById('appFullName').value,
@@ -507,6 +558,7 @@
         spm: { inst: document.getElementById('spmInst').value, year: document.getElementById('spmYear').value },
         higher: { inst: document.getElementById('higherInst').value, year: document.getElementById('higherYear').value }
       },
+      workExpData: workExpData,
       icFileBase64: icFile ? await toBase64(icFile) : null,
       cert1Base64: cert1File ? await toBase64(cert1File) : null,
       cert2Base64: cert2File ? await toBase64(cert2File) : null,
