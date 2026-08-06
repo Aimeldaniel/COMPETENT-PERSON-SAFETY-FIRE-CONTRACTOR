@@ -2,7 +2,7 @@
 // KONFIGURASI SISTEM
 // ==========================================
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
-const FOLDER_ATTACHMENTS_ID = "MASUKKAN_FOLDER_ID_GOOGLE_DRIVE_DI_SINI"; 
+const FOLDER_ATTACHMENTS_ID = "1m08sUQ3DM9Z6689AYyrdfMEF7HRWHI2O"; 
 
 function doGet() {
   return HtmlService.createTemplateFromFile('Index')
