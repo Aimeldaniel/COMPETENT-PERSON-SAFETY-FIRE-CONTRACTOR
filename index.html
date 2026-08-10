@@ -2,9 +2,13 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
-  <title>Sistem Competent Person Fire Safety Contractor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sistem Pendaftaran Competent Person Fire Safety Contractor</title>
+  
+  <!-- BOOTSTRAP 5 & ICONS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+  
   <style>
     body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .sidebar { min-height: 100vh; background: #0f172a; color: white; }
@@ -14,12 +18,23 @@
     .badge-draf { background-color: #64748b; }
     .badge-proses { background-color: #d97706; }
     .badge-lulus1 { background-color: #2563eb; }
-    .badge-lulus2 { background-color: #7c3aed; }
     .badge-bayar { background-color: #c026d3; }
     .badge-lulus { background-color: #16a34a; }
+    
+    #loadingOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.8); display: none; justify-content: center;
+      align-items: center; z-index: 9999; color: white; flex-direction: column;
+    }
   </style>
 </head>
 <body>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay">
+  <div class="spinner-border text-light mb-2" role="status" style="width: 3rem; height: 3rem;"></div>
+  <h5 class="fw-bold" id="loadingText">Sila tunggu... Memproses data</h5>
+</div>
 
 <div id="app">
   <!-- AUTH SECTION (LOGIN / REGISTER) -->
@@ -28,9 +43,9 @@
       <div class="col-md-5">
         <div class="card card-custom p-4 bg-white">
           <div class="text-center mb-4">
-            <i class="bi bi-shield-lock-fill text-primary display-4"></i>
+            <i class="bi bi-fire text-danger display-4"></i>
             <h4 class="fw-bold mt-2">Sistem Competent Person</h4>
-            <p class="text-muted small">Fire Safety Contractor Registration</p>
+            <p class="text-muted small">Fire Safety Contractor Registration (Firebase)</p>
           </div>
 
           <!-- LOGIN FORM -->
@@ -45,7 +60,7 @@
             </div>
             <button type="submit" class="btn btn-primary w-100 py-2">Log Masuk</button>
             <div class="text-center mt-3">
-              <a href="#" onclick="toggleAuth('register')" class="text-decoration-none small">Belum ada akaun? Daftar Awam</a>
+              <button type="button" onclick="toggleAuth('register')" class="btn btn-link p-0 text-decoration-none small">Belum ada akaun? Daftar Awam</button>
             </div>
           </form>
 
@@ -57,7 +72,7 @@
             </div>
             <div class="mb-2">
               <label class="form-label">No. Kad Pengenalan</label>
-              <input type="text" id="regIc" class="form-control" required>
+              <input type="text" id="regIc" class="form-control" placeholder="Contoh: 010203105555" maxlength="12" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
             </div>
             <div class="mb-2">
               <label class="form-label">Emel</label>
@@ -65,11 +80,11 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Kata Laluan</label>
-              <input type="password" id="regPass" class="form-control" required>
+              <input type="password" id="regPass" class="form-control" required minlength="6">
             </div>
             <button type="submit" class="btn btn-success w-100 py-2">Daftar Akaun Awam</button>
             <div class="text-center mt-3">
-              <a href="#" onclick="toggleAuth('login')" class="text-decoration-none small">Sudah ada akaun? Log Masuk</a>
+              <button type="button" onclick="toggleAuth('login')" class="btn btn-link p-0 text-decoration-none small">Sudah ada akaun? Log Masuk</button>
             </div>
           </form>
 
@@ -83,20 +98,17 @@
     <div class="row">
       <!-- SIDEBAR -->
       <div class="col-md-3 col-lg-2 sidebar p-3">
-        <h5 class="fw-bold mb-4 text-white"><i class="bi bi-fire text-danger me-2"></i>FireSafety CP</h5>
-        <p class="small text-muted mb-3" id="userRoleBadge">Role: Awam</p>
+        <h5 class="fw-bold mb-2 text-white"><i class="bi bi-fire text-danger me-2"></i>FireSafety CP</h5>
+        <p class="small text-info mb-4" id="userRoleBadge">Role: Awam</p>
         <ul class="nav flex-column">
           <li class="nav-item">
-            <a class="nav-link active" href="#" onclick="switchTab('dashboard')"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+            <a class="nav-link active" id="navDashboard" href="#" onclick="switchTab('dashboard')"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
           </li>
-          <li class="nav-item" id="menuPermohonan">
-            <a class="nav-link" href="#" onclick="switchTab('permohonan')"><i class="bi bi-file-earmark-plus me-2"></i>Permohonan Baru</a>
-          </li>
-          <li class="nav-item" id="menuAdminPegawai" style="display:none;">
-            <a class="nav-link" href="#" onclick="switchTab('adminPegawai')"><i class="bi bi-person-plus me-2"></i>Daftar Pegawai</a>
+          <li class="nav-item" id="menuPermohonan" style="display:none;">
+            <a class="nav-link" id="navPermohonan" href="#" onclick="switchTab('permohonan')"><i class="bi bi-file-earmark-plus me-2"></i>Permohonan Baru</a>
           </li>
           <li class="nav-item mt-4">
-            <a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Log Keluar</a>
+            <a class="nav-link text-danger" href="#" onclick="handleLogout()"><i class="bi bi-box-arrow-right me-2"></i>Log Keluar</a>
           </li>
         </ul>
       </div>
@@ -106,14 +118,17 @@
         
         <!-- DASHBOARD TAB -->
         <div id="tabDashboard">
-          <h4 class="fw-bold mb-3">Semak Status Permohonan</h4>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold m-0">Semak Status Permohonan</h4>
+            <button class="btn btn-sm btn-outline-primary" onclick="loadApplications()"><i class="bi bi-arrow-clockwise"></i> Segar Semula</button>
+          </div>
           <div class="card card-custom p-3 bg-white">
             <table class="table table-hover align-middle">
               <thead class="table-dark">
                 <tr>
                   <th>No. Permohonan</th>
                   <th>Pemohon</th>
-                  <th>Tarikh</th>
+                  <th>Tarikh Hantar</th>
                   <th>Status</th>
                   <th>Tindakan</th>
                 </tr>
@@ -125,12 +140,12 @@
           </div>
         </div>
 
-        <!-- PERMOHONAN FORM TAB -->
+        <!-- BORANG PERMOHONAN TAB (AWAM) -->
         <div id="tabPermohonan" style="display:none;">
           <h4 class="fw-bold mb-3">Borang Permohonan Competent Person</h4>
           <form id="formApp" onsubmit="handleFormSubmit(event, false)">
             
-            <!-- MAKLUMAT PEMOHON -->
+            <!-- 1. MAKLUMAT PEMOHON -->
             <div class="card card-custom p-4 bg-white mb-4">
               <h5 class="fw-bold border-bottom pb-2">1. Maklumat Pemohon</h5>
               <div class="row g-3 mt-1">
@@ -140,7 +155,7 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">No. Kad Pengenalan / Passport</label>
-                  <input type="text" id="appIcNo" class="form-control" required>
+                  <input type="text" id="appIcNo" class="form-control" placeholder="Contoh: 010203105555" maxlength="12" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Muat Naik Kad Pengenalan (IC)</label>
@@ -156,7 +171,7 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">No. Telefon Bimbit</label>
-                  <input type="text" id="appPhone" class="form-control" required>
+                  <input type="text" id="appPhone" class="form-control" placeholder="Contoh: 0123456789" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Alamat Surat-Menyurat</label>
@@ -165,65 +180,92 @@
               </div>
             </div>
 
-            <!-- KATEGORI PERAKUAN -->
+            <!-- 2. KATEGORI PERAKUAN (WITH AUTO-TICK) -->
             <div class="card card-custom p-4 bg-white mb-4">
               <h5 class="fw-bold border-bottom pb-2">2. Kategori Perakuan Orang Kompeten</h5>
               <div class="form-check mt-2">
                 <input class="form-check-input" type="checkbox" id="catMekanikal">
-                <label class="form-check-label fw-semibold">Mekanikal atau Elektrikal</label>
+                <label class="form-check-label fw-semibold" for="catMekanikal">Mekanikal atau Elektrikal</label>
                 <div class="ms-4 mt-1">
-                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subGendela"><label class="form-check-label">Penutup gendela gulung kebakaran</label></div>
-                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subPenggera"><label class="form-check-label">Panel penggera kebakaran</label></div>
-                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subPam"><label class="form-check-label">Pam sistem menentang kebakaran</label></div>
+                  <div class="form-check"><input class="form-check-input sub-mekanikal" type="checkbox" id="subGendela"><label class="form-check-label" for="subGendela">Penutup gendela gulung kebakaran</label></div>
+                  <div class="form-check"><input class="form-check-input sub-mekanikal" type="checkbox" id="subPenggera"><label class="form-check-label" for="subPenggera">Panel penggera kebakaran</label></div>
+                  <div class="form-check"><input class="form-check-input sub-mekanikal" type="checkbox" id="subPam"><label class="form-check-label" for="subPam">Pam sistem menentang kebakaran</label></div>
                 </div>
               </div>
 
               <div class="form-check mt-3">
                 <input class="form-check-input" type="checkbox" id="catAwam">
-                <label class="form-check-label fw-semibold">Awam atau Struktur</label>
+                <label class="form-check-label fw-semibold" for="catAwam">Awam atau Struktur</label>
               </div>
 
               <div class="form-check mt-3">
                 <input class="form-check-input" type="checkbox" id="catPemasangan">
-                <label class="form-check-label fw-semibold">Pemasangan Tetap atau Mudah Alih</label>
+                <label class="form-check-label fw-semibold" for="catPemasangan">Pemasangan Tetap atau Mudah Alih</label>
                 <div class="ms-4 mt-1">
-                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subGas"><label class="form-check-label">Sistem pemadaman kebakaran (Gas)</label></div>
-                  <div class="form-check"><input class="form-check-input" type="checkbox" id="subPemadamApi"><label class="form-check-label">Alat pemadam api</label></div>
+                  <div class="form-check"><input class="form-check-input sub-pemasangan" type="checkbox" id="subGas"><label class="form-check-label" for="subGas">Sistem pemadaman kebakaran (Gas)</label></div>
+                  <div class="form-check"><input class="form-check-input sub-pemasangan" type="checkbox" id="subPemadamApi"><label class="form-check-label" for="subPemadamApi">Alat pemadam api</label></div>
                 </div>
               </div>
             </div>
 
-            <!-- KELAYAKAN AKADEMIK -->
+            <!-- 3. KELAYAKAN AKADEMIK & SIJIL KOMPETENSI -->
             <div class="card card-custom p-4 bg-white mb-4">
-              <h5 class="fw-bold border-bottom pb-2">3. Kelayakan Akademik & Lampiran Sijil</h5>
-              <p class="small text-muted">Sijil SPM adalah <strong>Wajib</strong>. Diploma, Ijazah, Master, PhD adalah pilihan (Option).</p>
-              
-              <div class="row g-2 mb-2 align-items-center">
-                <div class="col-md-2"><span class="fw-bold">SPM (Wajib)</span></div>
-                <div class="col-md-4"><input type="text" id="spmInst" class="form-control" placeholder="Nama Sekolah / Institusi" required></div>
-                <div class="col-md-2"><input type="number" id="spmYear" class="form-control" placeholder="Tahun" required></div>
-                <div class="col-md-4"><input type="file" id="spmFile" class="form-control" required></div>
+              <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                <h5 class="fw-bold m-0">3. Kelayakan Akademik & Lampiran Sijil</h5>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addAcadRow()"><i class="bi bi-plus-circle me-1"></i>Tambah Akademik</button>
               </div>
-
-              <div class="row g-2 mb-2 align-items-center">
-                <div class="col-md-2"><span class="fw-bold">Diploma / Ijazah / Lain-lain</span></div>
-                <div class="col-md-4"><input type="text" id="higherInst" class="form-control" placeholder="Universiti / Kolej"></div>
-                <div class="col-md-2"><input type="number" id="higherYear" class="form-control" placeholder="Tahun"></div>
-                <div class="col-md-4"><input type="file" id="higherFile" class="form-control"></div>
+              <p class="small text-muted">Sijil SPM adalah <strong>Wajib</strong>.</p>
+              
+              <div class="table-responsive mb-3">
+                <table class="table table-bordered align-middle" id="acadTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 20%;">Tahap</th>
+                      <th>Nama Institusi / Sekolah</th>
+                      <th style="width: 15%;">Tahun</th>
+                      <th>Muat Naik Sijil</th>
+                      <th style="width: 50px;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="acadTableBody">
+                    <tr>
+                      <td>
+                        <select class="form-select acad-level" required>
+                          <option value="SPM">SPM (Wajib)</option>
+                          <option value="Diploma">Diploma</option>
+                          <option value="Ijazah Sarjana Muda">Ijazah Sarjana Muda</option>
+                          <option value="Sarjana (Master)">Sarjana (Master)</option>
+                          <option value="PhD">PhD</option>
+                          <option value="Lain-lain">Lain-lain</option>
+                        </select>
+                      </td>
+                      <td><input type="text" class="form-control acad-inst" placeholder="Nama Sekolah / Institusi" required></td>
+                      <td><input type="number" class="form-control acad-year" placeholder="YYYY" required></td>
+                      <td><input type="file" class="form-control acad-file" accept="image/*,application/pdf"></td>
+                      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
               <hr>
-              <h6>Sijil Latihan Kompetensi:</h6>
-              <div class="row g-2">
-                <div class="col-md-6"><label class="form-label">Sijil Latihan 1</label><input type="file" id="cert1File" class="form-control"></div>
-                <div class="col-md-6"><label class="form-label">Sijil Latihan 2</label><input type="file" id="cert2File" class="form-control"></div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold m-0">Sijil Latihan Kompetensi:</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCertRow()"><i class="bi bi-plus-circle me-1"></i>Tambah Sijil</button>
+              </div>
+              <div id="certContainer">
+                <div class="row g-2 mb-2 cert-row">
+                  <div class="col-md-5"><input type="text" class="form-control cert-title" placeholder="Nama Sijil / Kursus Kompetensi 1"></div>
+                  <div class="col-md-6"><input type="file" class="form-control cert-file" accept="image/*,application/pdf"></div>
+                  <div class="col-md-1 text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCertRow(this)"><i class="bi bi-trash"></i></button></div>
+                </div>
               </div>
             </div>
 
-            <!-- PENGALAMAN KERJA (DINAMIK BARIS) -->
+            <!-- 4. PENGALAMAN KERJA (1 PENGALAMAN = 1 SURAT MAJIKAN) -->
             <div class="card card-custom p-4 bg-white mb-4">
               <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                <h5 class="fw-bold m-0">4. Senarai Pengalaman Kerja & Surat Majikan</h5>
+                <h5 class="fw-bold m-0">4. Senarai Pengalaman Kerja & Surat Pengesahan Majikan</h5>
                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="addWorkRow()"><i class="bi bi-plus-circle me-1"></i>Tambah Pengalaman</button>
               </div>
               
@@ -232,31 +274,27 @@
                   <thead class="table-light">
                     <tr>
                       <th>Nama Syarikat & Jawatan</th>
-                      <th>Keterangan Ringkas Pengalaman</th>
-                      <th>Tahun Mula</th>
-                      <th>Tahun Akhir</th>
+                      <th>Keterangan Ringkas</th>
+                      <th style="width: 12%;">Tahun Mula</th>
+                      <th style="width: 12%;">Tahun Akhir</th>
+                      <th style="width: 25%;">Surat Majikan (Muat Naik)</th>
                       <th style="width: 50px;">Aksi</th>
                     </tr>
                   </thead>
                   <tbody id="workTableBody">
                     <tr>
-                      <td><input type="text" class="form-control exp-company" required></td>
-                      <td><input type="text" class="form-control exp-desc" required></td>
-                      <td><input type="text" class="form-control exp-start" placeholder="YYYY" required></td>
-                      <td><input type="text" class="form-control exp-end" placeholder="YYYY / Present" required></td>
-                      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWorkRow(this)"><i class="bi bi-trash"></i></button></td>
+                      <td><input type="text" class="form-control exp-company"></td>
+                      <td><input type="text" class="form-control exp-desc"></td>
+                      <td><input type="text" class="form-control exp-start" placeholder="YYYY"></td>
+                      <td><input type="text" class="form-control exp-end" placeholder="YYYY / Present"></td>
+                      <td><input type="file" class="form-control exp-file" accept="image/*,application/pdf"></td>
+                      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-
-              <div class="mt-3">
-                <label class="form-label fw-bold">Surat Pengesahan Pengalaman Kerja oleh Majikan</label>
-                <input type="file" id="employerLetterFile" class="form-control">
-              </div>
             </div>
 
-            <!-- BUTTON ACTIONS -->
             <div class="d-flex gap-2 mb-5">
               <button type="button" class="btn btn-secondary px-4" onclick="handleFormSubmit(event, true)">Simpan Draf</button>
               <button type="submit" class="btn btn-primary px-5">Hantar Permohonan</button>
@@ -265,36 +303,50 @@
           </form>
         </div>
 
-        <!-- ADMIN REGISTER PEGAWAI TAB -->
-        <div id="tabAdminPegawai" style="display:none;">
-          <h4 class="fw-bold mb-3">Daftar Pegawai Lulus (Admin Sahaja)</h4>
-          <div class="card card-custom p-4 bg-white col-md-6">
-            <form onsubmit="handleAdminRegisterPegawai(event)">
-              <div class="mb-2">
-                <label class="form-label">Nama Pegawai</label>
-                <input type="text" id="pegName" class="form-control" required>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">No. Kad Pengenalan</label>
-                <input type="text" id="pegIc" class="form-control" required>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Emel Rasmi</label>
-                <input type="email" id="pegEmail" class="form-control" required>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Kata Laluan</label>
-                <input type="password" id="pegPass" class="form-control" required>
-              </div>
+        <!-- 5. TAB SEMAKAN PEGAWAI (PEGAWAI 1 & 2) -->
+        <div id="tabPegawaiReview" style="display:none;">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold m-0">Semakan & Kelulusan Permohonan</h4>
+            <button class="btn btn-outline-secondary btn-sm" onclick="switchTab('dashboard')"><i class="bi bi-arrow-left me-1"></i>Kembali ke Dashboard</button>
+          </div>
+
+          <div class="card card-custom p-4 bg-white mb-4">
+            <div class="d-flex justify-content-between border-bottom pb-2 mb-3">
+              <h5 class="fw-bold text-primary" id="revAppId">No. Permohonan: -</h5>
+              <span class="badge bg-warning text-dark fs-6" id="revStatus">Status: -</span>
+            </div>
+
+            <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-person-lines-fill me-2"></i>Maklumat Pemohon</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4"><strong>Nama Penuh:</strong> <p id="revFullName" class="text-muted mb-0">-</p></div>
+              <div class="col-md-4"><strong>No. Kad Pengenalan:</strong> <p id="revIcNo" class="text-muted mb-0">-</p></div>
+              <div class="col-md-4"><strong>Emel:</strong> <p id="revEmail" class="text-muted mb-0">-</p></div>
+              <div class="col-md-4"><strong>No. Telefon:</strong> <p id="revPhone" class="text-muted mb-0">-</p></div>
+              <div class="col-md-4"><strong>Jantina / Tarikh Lahir:</strong> <p id="revGenderDob" class="text-muted mb-0">-</p></div>
+              <div class="col-md-4"><strong>Alamat:</strong> <p id="revAddress" class="text-muted mb-0">-</p></div>
+            </div>
+
+            <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-paperclip me-2"></i>Dokumen Lampiran & Sijil</h6>
+            <div class="row g-2 mb-4" id="revAttachments">
+              <!-- Dynamic via JS -->
+            </div>
+
+            <div class="card bg-light p-3 border-0 mt-3">
+              <h6 class="fw-bold text-dark mb-2"><i class="bi bi-check-square-fill me-2"></i>Tindakan Kelulusan Pegawai</h6>
               <div class="mb-3">
-                <label class="form-label">Peranan / Role</label>
-                <select id="pegRole" class="form-select">
-                  <option value="pegawai_1">Pegawai Lulus 1 (Semakan)</option>
-                  <option value="pegawai_2">Pegawai Lulus 2 (Kelulusan)</option>
-                </select>
+                <label class="form-label fw-semibold">Ulasan / Catatan Semakan</label>
+                <textarea id="pegawaiReviewText" class="form-control" rows="3" placeholder="Masukkan ulasan..."></textarea>
               </div>
-              <button type="submit" class="btn btn-primary w-100">Daftar Pegawai</button>
-            </form>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-success px-4" onclick="submitPegawaiDecision(true)">
+                  <i class="bi bi-check-circle me-1"></i> Perakukan / Luluskan
+                </button>
+                <button type="button" class="btn btn-danger px-4" onclick="submitPegawaiDecision(false)">
+                  <i class="bi bi-x-circle me-1"></i> Tolak / Kuari
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -303,7 +355,7 @@
   </div>
 </div>
 
-<!-- MODAL BUKTI PEMBAYARAN -->
+<!-- MODAL PEMBAYARAN -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -313,9 +365,9 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="payAppId">
-        <p class="small text-muted">Permohonan anda telah diluluskan pada peringkat 2. Sila muat naik resit bagi proses kelulusan akhir.</p>
+        <p class="small text-muted">Sila muat naik resit pembayaran bagi membolehkan semakan kelulusan akhir.</p>
         <div class="mb-3">
-          <label class="form-label">Resit Pembayaran (PDF/Image)</label>
+          <label class="form-label">Resit Pembayaran (PDF/Imej)</label>
           <input type="file" id="payReceiptFile" class="form-control" required>
         </div>
       </div>
@@ -326,14 +378,93 @@
   </div>
 </div>
 
-<!-- JS LIBRARIES -->
+<!-- BOOTSTRAP JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
+<!-- FIREBASE SDK V9 (MODULAR COMPAT) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
-  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxgEn6_FuPOgPlr8AvdxR3H_XJQMEJ5hy-YZ1Vq-u5FK3DBamrsUcw1YJgnFTMJtuSf0w/exec";
-  
-  let currentUser = null;
+<script>
+  // =========================================================
+  // 1. KONFIGURASI FIREBASE (GANTIKAN DENGAN KUNCI ANDA)
+  // =========================================================
+  const firebaseConfig = {
+  apiKey: "AIzaSyCSiKHGk5_3VZM1TGunlWiFQGBzklJLueE",
+  authDomain: "bomba-cp-system.firebaseapp.com",
+  projectId: "bomba-cp-system",
+  storageBucket: "bomba-cp-system.firebasestorage.app",
+  messagingSenderId: "243345828686",
+  appId: "1:243345828686:web:cc7062090d19b8388b4c1f",
+  measurementId: "G-M98CCK3KXS"
+};
+
+  // Inisialisasi Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  let currentUserData = null;
+  let currentReviewApp = null;
+
+  function showLoading(msg) {
+    document.getElementById('loadingText').innerText = msg || "Memproses data...";
+    document.getElementById('loadingOverlay').style.display = 'flex';
+  }
+
+  function hideLoading() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }
+
+  // =========================================================
+  // 2. PEMERIKSAAN AUTH & ROLES
+  // =========================================================
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      showLoading("Memuatkan profil...");
+      try {
+        const doc = await db.collection("users").doc(user.uid).get();
+        if (doc.exists) {
+          currentUserData = { uid: user.uid, email: user.email, ...doc.data() };
+          initDashboard();
+        } else {
+          alert("Profil pengguna tidak ditemui!");
+          handleLogout();
+        }
+      } catch (err) {
+        alert("Ralat memuatkan profil: " + err.message);
+        hideLoading();
+      }
+    } else {
+      document.getElementById('authSection').style.display = 'block';
+      document.getElementById('mainDashboard').style.display = 'none';
+      hideLoading();
+    }
+  });
+
+  function initDashboard() {
+    document.getElementById('authSection').style.display = 'none';
+    document.getElementById('mainDashboard').style.display = 'block';
+    
+    document.getElementById('userRoleBadge').innerText = `Pengguna: ${currentUserData.fullName} (${currentUserData.role.toUpperCase()})`;
+
+    const menuPermohonan = document.getElementById('menuPermohonan');
+
+    if (currentUserData.role === 'awam') {
+      if (menuPermohonan) menuPermohonan.style.display = 'block';
+      document.getElementById('appFullName').value = currentUserData.fullName || '';
+      document.getElementById('appIcNo').value = currentUserData.icNo || '';
+    } else {
+      if (menuPermohonan) menuPermohonan.style.display = 'none';
+    }
+
+    initCheckboxListeners();
+    switchTab('dashboard');
+    loadApplications();
+  }
 
   function toggleAuth(type) {
     if(type === 'register') {
@@ -345,139 +476,112 @@
     }
   }
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
+    showLoading("Menyemak log masuk...");
     const email = document.getElementById('loginEmail').value;
     const pass = document.getElementById('loginPassword').value;
 
-    google.script.run.withSuccessHandler(res => {
-      if(res.success) {
-        currentUser = res.user;
-        initDashboard();
-      } else {
-        alert(res.message);
-      }
-    }).loginUser(email, pass);
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } catch (err) {
+      hideLoading();
+      alert("Ralat Log Masuk: " + err.message);
+    }
   }
 
-  function handleRegister(e) {
+  async function handleRegister(e) {
     e.preventDefault();
-    const data = {
-      fullName: document.getElementById('regName').value,
-      icNo: document.getElementById('regIc').value,
-      email: document.getElementById('regEmail').value,
-      password: document.getElementById('regPass').value,
-      role: 'awam'
-    };
+    showLoading("Mendaftarkan akaun awam...");
 
-    google.script.run.withSuccessHandler(res => {
-      alert(res.message);
-      if(res.success) toggleAuth('login');
-    }).registerUser(data);
-  }
+    const fullName = document.getElementById('regName').value;
+    const icNo = document.getElementById('regIc').value;
+    const email = document.getElementById('regEmail').value;
+    const pass = document.getElementById('regPass').value;
 
-  function initDashboard() {
-    document.getElementById('authSection').style.display = 'none';
-    document.getElementById('mainDashboard').style.display = 'block';
-    document.getElementById('userRoleBadge').innerText = `Pengguna: ${currentUser.name} (${currentUser.role.toUpperCase()})`;
-
-    if(currentUser.role === 'admin') {
-      document.getElementById('menuAdminPegawai').style.display = 'block';
-    } else {
-      document.getElementById('menuAdminPegawai').style.display = 'none';
-    }
-
-    if(currentUser.role !== 'awam') {
-      document.getElementById('menuPermohonan').style.display = 'none';
-    } else {
-      document.getElementById('menuPermohonan').style.display = 'block';
-      // Auto-fill nama & ic dari akaun pengguna
-      document.getElementById('appFullName').value = currentUser.name || '';
-      document.getElementById('appIcNo').value = currentUser.ic || '';
-    }
-
-    loadApplications();
-  }
-
-  function loadApplications() {
-    google.script.run.withSuccessHandler(data => {
-      const tbody = document.getElementById('applicationTableBody');
-      tbody.innerHTML = '';
-
-      if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Tiada permohonan dijumpai.</td></tr>';
-        return;
-      }
-
-      data.forEach(item => {
-        let badgeClass = 'badge-draf';
-        if(item.status === 'Dalam Proses') badgeClass = 'badge-proses';
-        if(item.status === 'Kelulusan Pertama') badgeClass = 'badge-lulus1';
-        if(item.status === 'Kelulusan Kedua') badgeClass = 'badge-lulus2';
-        if(item.status === 'Dalam Pembayaran') badgeClass = 'badge-bayar';
-        if(item.status === 'Lulus Sepenuhnya') badgeClass = 'badge-lulus';
-
-        let actionBtns = '';
-        if(currentUser.role === 'pegawai_1' && item.status === 'Dalam Proses') {
-          actionBtns = `<button class="btn btn-sm btn-primary" onclick="approveApp('${item.appId}', 'Kelulusan Pertama', 'pegawai_1')">Perakukan</button>`;
-        } else if(currentUser.role === 'pegawai_2' && item.status === 'Kelulusan Pertama') {
-          actionBtns = `<button class="btn btn-sm btn-success" onclick="approveApp('${item.appId}', 'Kelulusan Kedua', 'pegawai_2')">Luluskan</button>`;
-        } else if((currentUser.role === 'pegawai_1' || currentUser.role === 'pegawai_2') && item.status === 'Dalam Pembayaran') {
-          actionBtns = `<button class="btn btn-sm btn-success" onclick="approveApp('${item.appId}', 'Lulus Sepenuhnya', '${currentUser.role}')">Sahkan Bayaran & Lulus</button>`;
-        } else if(currentUser.role === 'awam' && item.status === 'Kelulusan Kedua') {
-          actionBtns = `<button class="btn btn-sm btn-warning" onclick="openPaymentModal('${item.appId}')">Bayar Sekarang</button>`;
-        }
-
-        // Pautan Sijil
-        if(item.status === 'Lulus Sepenuhnya' && item.certUrl) {
-          actionBtns += ` <a href="${item.certUrl}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-download"></i> Sijil</a>`;
-        }
-
-        tbody.innerHTML += `
-          <tr>
-            <td><strong>${item.appId}</strong></td>
-            <td>${item.fullName}<br><small class="text-muted">${item.userEmail}</small></td>
-            <td>${new Date(item.createdAt).toLocaleDateString()}</td>
-            <td><span class="badge ${badgeClass}">${item.status}</span></td>
-            <td>${actionBtns}</td>
-          </tr>
-        `;
+    try {
+      const res = await auth.createUserWithEmailAndPassword(email, pass);
+      await db.collection("users").doc(res.user.uid).set({
+        fullName: fullName,
+        icNo: icNo,
+        email: email,
+        role: "awam",
+        status: "Aktif",
+        createdAt: new Date().toISOString()
       });
-    }).getApplicationsForRole(currentUser.email, currentUser.role);
-  }
-
-  function approveApp(appId, newStatus, role) {
-    const review = prompt("Masukkan ulasan / ulasan semakan:");
-    if(review !== null) {
-      google.script.run.withSuccessHandler(res => {
-        alert(res.message);
-        loadApplications();
-      }).processApproval(appId, newStatus, review, role);
+      hideLoading();
+      alert("Pendaftaran berjaya!");
+    } catch (err) {
+      hideLoading();
+      alert("Ralat Pendaftaran: " + err.message);
     }
   }
 
-  function openPaymentModal(appId) {
-    document.getElementById('payAppId').value = appId;
-    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+  function handleLogout() {
+    auth.signOut();
   }
 
-  async function submitPayment() {
-    const appId = document.getElementById('payAppId').value;
-    const fileInput = document.getElementById('payReceiptFile');
-    if(!fileInput.files[0]) return alert('Sila pilih fail resit!');
+  // =========================================================
+  // 3. AUTO-TICK CHECKBOX & JADUAL DINAMIK
+  // =========================================================
+  function initCheckboxListeners() {
+    const catMekanikal = document.getElementById('catMekanikal');
+    const subsMekanikal = document.querySelectorAll('.sub-mekanikal');
+    subsMekanikal.forEach(sub => {
+      sub.addEventListener('change', function() { if (this.checked && catMekanikal) catMekanikal.checked = true; });
+    });
+    if (catMekanikal) {
+      catMekanikal.addEventListener('change', function() { if (!this.checked) subsMekanikal.forEach(s => s.checked = false); });
+    }
 
-    const base64 = await toBase64(fileInput.files[0]);
-    google.script.run.withSuccessHandler(res => {
-      alert(res.message);
-      bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-      loadApplications();
-    }).submitPaymentReceipt(appId, base64);
+    const catPemasangan = document.getElementById('catPemasangan');
+    const subsPemasangan = document.querySelectorAll('.sub-pemasangan');
+    subsPemasangan.forEach(sub => {
+      sub.addEventListener('change', function() { if (this.checked && catPemasangan) catPemasangan.checked = true; });
+    });
+    if (catPemasangan) {
+      catPemasangan.addEventListener('change', function() { if (!this.checked) subsPemasangan.forEach(s => s.checked = false); });
+    }
   }
 
-  function switchTab(tab) {
-    document.getElementById('tabDashboard').style.display = (tab === 'dashboard') ? 'block' : 'none';
-    document.getElementById('tabPermohonan').style.display = (tab === 'permohonan') ? 'block' : 'none';
-    document.getElementById('tabAdminPegawai').style.display = (tab === 'adminPegawai') ? 'block' : 'none';
+  function addAcadRow() {
+    const tbody = document.getElementById('acadTableBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <select class="form-select acad-level" required>
+          <option value="Diploma">Diploma</option>
+          <option value="Ijazah Sarjana Muda">Ijazah Sarjana Muda</option>
+          <option value="Sarjana (Master)">Sarjana (Master)</option>
+          <option value="PhD">PhD</option>
+          <option value="Lain-lain">Lain-lain</option>
+        </select>
+      </td>
+      <td><input type="text" class="form-control acad-inst" placeholder="Nama Institusi / Kolej" required></td>
+      <td><input type="number" class="form-control acad-year" placeholder="YYYY" required></td>
+      <td><input type="file" class="form-control acad-file" accept="image/*,application/pdf"></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function addCertRow() {
+    const container = document.getElementById('certContainer');
+    const count = container.querySelectorAll('.cert-row').length + 1;
+    const div = document.createElement('div');
+    div.className = "row g-2 mb-2 cert-row";
+    div.innerHTML = `
+      <div class="col-md-5"><input type="text" class="form-control cert-title" placeholder="Nama Sijil / Kursus Kompetensi ${count}"></div>
+      <div class="col-md-6"><input type="file" class="form-control cert-file" accept="image/*,application/pdf"></div>
+      <div class="col-md-1 text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCertRow(this)"><i class="bi bi-trash"></i></button></div>
+    `;
+    container.appendChild(div);
+  }
+
+  function removeCertRow(btn) {
+    const rows = document.querySelectorAll('.cert-row');
+    if (rows.length > 1) btn.closest('.cert-row').remove();
+    else alert("Sekurang-kurangnya satu ruangan sijil diperlukan.");
   }
 
   function addWorkRow() {
@@ -488,106 +592,287 @@
       <td><input type="text" class="form-control exp-desc"></td>
       <td><input type="text" class="form-control exp-start" placeholder="YYYY"></td>
       <td><input type="text" class="form-control exp-end" placeholder="YYYY / Present"></td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeWorkRow(this)"><i class="bi bi-trash"></i></button></td>
+      <td><input type="file" class="form-control exp-file" accept="image/*,application/pdf"></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
   }
 
-  function removeWorkRow(btn) {
-    const row = btn.closest('tr');
-    if (document.querySelectorAll('#workTableBody tr').length > 1) {
-      row.remove();
-    } else {
-      alert('Sekurang-kurangnya satu baris pengalaman kerja diperlukan.');
+  function removeRow(btn) {
+    if (btn && btn.closest('tr')) btn.closest('tr').remove();
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
+    document.getElementById('tabDashboard').style.display = (tab === 'dashboard') ? 'block' : 'none';
+    document.getElementById('tabPermohonan').style.display = (tab === 'permohonan') ? 'block' : 'none';
+    document.getElementById('tabPegawaiReview').style.display = (tab === 'pegawaiReview') ? 'block' : 'none';
+
+    if(tab === 'dashboard') document.getElementById('navDashboard').classList.add('active');
+    if(tab === 'permohonan') document.getElementById('navPermohonan').classList.add('active');
+  }
+
+  // Helper Muat Naik Fail Ke Firebase Storage
+  async function uploadFileToFirebase(file, path) {
+    if (!file) return "";
+    const storageRef = storage.ref(`${path}/${Date.now()}_${file.name}`);
+    const snapshot = await storageRef.put(file);
+    return await snapshot.ref.getDownloadURL();
+  }
+
+  // =========================================================
+  // 4. HANTAR BORANG PERMOHONAN KE FIRESTORE & STORAGE
+  // =========================================================
+  async function handleFormSubmit(e, isDraft) {
+    e.preventDefault();
+
+    if (!isDraft) {
+      const hasCat = document.getElementById('catMekanikal').checked || document.getElementById('catAwam').checked || document.getElementById('catPemasangan').checked;
+      if (!hasCat) return alert("Sila pilih sekurang-kurangnya SATU Kategori Perakuan!");
+    }
+
+    showLoading("Muat naik dokumen & menyimpan permohonan...");
+
+    try {
+      // 1. Upload Fail IC
+      const icFile = document.getElementById('appFileIc').files[0];
+      const icUrl = await uploadFileToFirebase(icFile, "ic_documents");
+
+      // 2. Upload Academic Files
+      const academicData = [];
+      const acadRows = document.querySelectorAll('#acadTableBody tr');
+      for (let tr of acadRows) {
+        const level = tr.querySelector('.acad-level').value;
+        const inst = tr.querySelector('.acad-inst').value;
+        const year = tr.querySelector('.acad-year').value;
+        const fileInput = tr.querySelector('.acad-file').files[0];
+        const fileUrl = await uploadFileToFirebase(fileInput, "academic_documents");
+        if (inst && year) academicData.push({ level, inst, year, fileUrl });
+      }
+
+      // 3. Upload Sijil Kompetensi
+      const certCompData = [];
+      const certRows = document.querySelectorAll('.cert-row');
+      for (let row of certRows) {
+        const title = row.querySelector('.cert-title').value;
+        const fileInput = row.querySelector('.cert-file').files[0];
+        const fileUrl = await uploadFileToFirebase(fileInput, "competency_certificates");
+        if (title || fileUrl) certCompData.push({ title, fileUrl });
+      }
+
+      // 4. Upload Pengalaman Kerja & Surat Majikan
+      const workExpData = [];
+      const workRows = document.querySelectorAll('#workTableBody tr');
+      for (let tr of workRows) {
+        const company = tr.querySelector('.exp-company').value;
+        const desc = tr.querySelector('.exp-desc').value;
+        const start = tr.querySelector('.exp-start').value;
+        const end = tr.querySelector('.exp-end').value;
+        const fileInput = tr.querySelector('.exp-file').files[0];
+        const letterUrl = await uploadFileToFirebase(fileInput, "employer_letters");
+        if (company) workExpData.push({ company, desc, start, end, letterUrl });
+      }
+
+      // Jana App ID (C1-CPFSC0001)
+      const appRef = db.collection("applications");
+      const snapshot = await appRef.get();
+      const nextNo = String(snapshot.size + 1).padStart(4, '0');
+      const appId = "C1-CPFSC" + nextNo;
+
+      const payload = {
+        appId: appId,
+        uid: currentUserData.uid,
+        userEmail: currentUserData.email,
+        fullName: document.getElementById('appFullName').value,
+        icNo: document.getElementById('appIcNo').value,
+        icUrl: icUrl,
+        gender: document.getElementById('appGender').value,
+        dob: document.getElementById('appDob').value,
+        phone: document.getElementById('appPhone').value,
+        address: document.getElementById('appAddress').value,
+        status: isDraft ? "Draf" : "Dalam Proses",
+        categoryData: {
+          mekanikal: document.getElementById('catMekanikal').checked,
+          gendela: document.getElementById('subGendela').checked,
+          penggera: document.getElementById('subPenggera').checked,
+          pam: document.getElementById('subPam').checked,
+          awam: document.getElementById('catAwam').checked,
+          pemasangan: document.getElementById('catPemasangan').checked,
+          gas: document.getElementById('subGas').checked,
+          pemadamApi: document.getElementById('subPemadamApi').checked
+        },
+        academicData: academicData,
+        certCompData: certCompData,
+        workExpData: workExpData,
+        createdAt: new Date().toISOString()
+      };
+
+      await appRef.doc(appId).set(payload);
+      hideLoading();
+      alert("Permohonan berjaya dihantar! No ID: " + appId);
+      switchTab('dashboard');
+      loadApplications();
+
+    } catch (err) {
+      hideLoading();
+      alert("Ralat Penyerahan: " + err.message);
     }
   }
 
-  function handleAdminRegisterPegawai(e) {
-    e.preventDefault();
-    const data = {
-      fullName: document.getElementById('pegName').value,
-      icNo: document.getElementById('pegIc').value,
-      email: document.getElementById('pegEmail').value,
-      password: document.getElementById('pegPass').value,
-      role: document.getElementById('pegRole').value
-    };
+  // =========================================================
+  // 5. MUAT TURUN SENARAI PERMOHONAN REAL-TIME
+  // =========================================================
+  async function loadApplications() {
+    showLoading("Memuatkan senarai permohonan...");
+    const tbody = document.getElementById('applicationTableBody');
+    tbody.innerHTML = '';
 
-    google.script.run.withSuccessHandler(res => {
-      alert(res.message);
-      if(res.success) e.target.reset();
-    }).registerUser(data);
+    try {
+      let query = db.collection("applications");
+      
+      if (currentUserData.role === 'awam') {
+        query = query.where("userEmail", "==", currentUserData.email);
+      } else if (currentUserData.role === 'pegawai_1') {
+        query = query.where("status", "in", ["Dalam Proses", "Dalam Pembayaran"]);
+      } else if (currentUserData.role === 'pegawai_2') {
+        query = query.where("status", "in", ["Pembayaran Disahkan", "Kelulusan Pertama (Menunggu Pembayaran)"]);
+      }
+
+      const snapshot = await query.get();
+
+      if (snapshot.empty) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Tiada rekod permohonan.</td></tr>';
+        hideLoading();
+        return;
+      }
+
+      snapshot.forEach(doc => {
+        const item = doc.data();
+        let badgeClass = 'badge-draf';
+        const st = item.status || 'Draf';
+
+        if (st === 'Dalam Proses') badgeClass = 'badge-proses';
+        if (st.includes('Kelulusan Pertama')) badgeClass = 'badge-lulus1';
+        if (st === 'Dalam Pembayaran') badgeClass = 'badge-bayar';
+        if (st === 'Pembayaran Disahkan') badgeClass = 'badge-lulus1';
+        if (st === 'Lulus Sepenuhnya') badgeClass = 'badge-lulus';
+
+        let actionBtns = '';
+        if (currentUserData.role === 'pegawai_1' && (st === 'Dalam Proses' || st === 'Dalam Pembayaran')) {
+          actionBtns = `<button class="btn btn-sm btn-primary" onclick="openReviewPage('${item.appId}')"><i class="bi bi-search me-1"></i> Semak & Perakukan</button>`;
+        } else if (currentUserData.role === 'pegawai_2' && (st === 'Pembayaran Disahkan' || st.includes('Kelulusan Pertama'))) {
+          actionBtns = `<button class="btn btn-sm btn-success" onclick="openReviewPage('${item.appId}')"><i class="bi bi-check2-square me-1"></i> Semak & Luluskan</button>`;
+        } else if (currentUserData.role === 'awam' && st.includes('Kelulusan Pertama')) {
+          actionBtns = `<button class="btn btn-sm btn-warning" onclick="openPaymentModal('${item.appId}')"><i class="bi bi-upload me-1"></i> Muat Naik Resit</button>`;
+        }
+
+        tbody.innerHTML += `
+          <tr>
+            <td><strong>${item.appId}</strong></td>
+            <td>${item.fullName}<br><small class="text-muted">${item.userEmail}</small></td>
+            <td>${String(item.createdAt).substring(0, 10)}</td>
+            <td><span class="badge ${badgeClass}">${st}</span></td>
+            <td>${actionBtns || '<span class="text-muted small">Tiada tindakan</span>'}</td>
+          </tr>
+        `;
+      });
+      hideLoading();
+    } catch (err) {
+      hideLoading();
+      alert("Ralat memuatkan data: " + err.message);
+    }
   }
 
-  async function handleFormSubmit(e, isDraft) {
-    if(e) e.preventDefault();
+  async function openReviewPage(appId) {
+    showLoading("Memuatkan maklumat...");
+    try {
+      const doc = await db.collection("applications").doc(appId).get();
+      if (!doc.exists) return alert("Permohonan tidak wujud!");
 
-    const icFile = document.getElementById('appFileIc').files[0];
-    const cert1File = document.getElementById('cert1File').files[0];
-    const cert2File = document.getElementById('cert2File').files[0];
-    const employerFile = document.getElementById('employerLetterFile').files[0];
+      currentReviewApp = doc.data();
 
-    // Ambil Data Pengalaman Kerja dari Jadual Dinamik
-    const workExpData = [];
-    document.querySelectorAll('#workTableBody tr').forEach(tr => {
-      const company = tr.querySelector('.exp-company').value;
-      const desc = tr.querySelector('.exp-desc').value;
-      const start = tr.querySelector('.exp-start').value;
-      const end = tr.querySelector('.exp-end').value;
-      if (company || desc) {
-        workExpData.push({ company, desc, start, end });
+      document.getElementById('revAppId').innerText = `No. Permohonan: ${currentReviewApp.appId}`;
+      document.getElementById('revStatus').innerText = `Status: ${currentReviewApp.status}`;
+      document.getElementById('revFullName').innerText = currentReviewApp.fullName;
+      document.getElementById('revIcNo').innerText = currentReviewApp.icNo;
+      document.getElementById('revEmail').innerText = currentReviewApp.userEmail;
+      document.getElementById('revPhone').innerText = currentReviewApp.phone;
+      document.getElementById('revGenderDob').innerText = `${currentReviewApp.gender} / ${currentReviewApp.dob}`;
+      document.getElementById('revAddress').innerText = currentReviewApp.address;
+
+      const attachDiv = document.getElementById('revAttachments');
+      attachDiv.innerHTML = '';
+
+      if(currentReviewApp.icUrl) {
+        attachDiv.innerHTML += `<div class="col-md-4"><div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center"><span>Salinan IC</span><a href="${currentReviewApp.icUrl}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a></div></div>`;
       }
-    });
-
-    const payload = {
-      email: currentUser.email,
-      fullName: document.getElementById('appFullName').value,
-      icNo: document.getElementById('appIcNo').value,
-      gender: document.getElementById('appGender').value,
-      dob: document.getElementById('appDob').value,
-      phone: document.getElementById('appPhone').value,
-      address: document.getElementById('appAddress').value,
-      isDraft: isDraft,
-      categoryData: {
-        mekanikal: document.getElementById('catMekanikal').checked,
-        gendela: document.getElementById('subGendela').checked,
-        penggera: document.getElementById('subPenggera').checked,
-        pam: document.getElementById('subPam').checked,
-        awam: document.getElementById('catAwam').checked,
-        pemasangan: document.getElementById('catPemasangan').checked,
-        gas: document.getElementById('subGas').checked,
-        pemadamApi: document.getElementById('subPemadamApi').checked
-      },
-      academicData: {
-        spm: { inst: document.getElementById('spmInst').value, year: document.getElementById('spmYear').value },
-        higher: { inst: document.getElementById('higherInst').value, year: document.getElementById('higherYear').value }
-      },
-      workExpData: workExpData,
-      icFileBase64: icFile ? await toBase64(icFile) : null,
-      cert1Base64: cert1File ? await toBase64(cert1File) : null,
-      cert2Base64: cert2File ? await toBase64(cert2File) : null,
-      employerLetterBase64: employerFile ? await toBase64(employerFile) : null
-    };
-
-    google.script.run.withSuccessHandler(res => {
-      alert(res.message);
-      if(res.success) {
-        switchTab('dashboard');
-        loadApplications();
+      if(currentReviewApp.paymentReceiptUrl) {
+        attachDiv.innerHTML += `<div class="col-md-4"><div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center"><span>Resit Pembayaran</span><a href="${currentReviewApp.paymentReceiptUrl}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a></div></div>`;
       }
-    }).submitApplication(payload);
+
+      hideLoading();
+      switchTab('pegawaiReview');
+    } catch (err) {
+      hideLoading();
+      alert("Ralat: " + err.message);
+    }
   }
 
-  const toBase64 = file => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
-  });
+  async function submitPegawaiDecision(isApproved) {
+    const reviewText = document.getElementById('pegawaiReviewText').value;
+    if (!reviewText && !isApproved) return alert("Sila masukkan ulasan penolakan!");
 
-  function logout() {
-    currentUser = null;
-    document.getElementById('mainDashboard').style.display = 'none';
-    document.getElementById('authSection').style.display = 'block';
+    showLoading("Mengemaskini keputusan...");
+
+    let nextStatus = "";
+    if (currentUserData.role === 'pegawai_1') {
+      nextStatus = isApproved ? "Kelulusan Pertama (Menunggu Pembayaran)" : "Ditolak";
+    } else if (currentUserData.role === 'pegawai_2') {
+      nextStatus = isApproved ? "Lulus Sepenuhnya" : "Ditolak";
+    }
+
+    try {
+      await db.collection("applications").doc(currentReviewApp.appId).update({
+        status: nextStatus,
+        reviewText: reviewText,
+        updatedAt: new Date().toISOString()
+      });
+      hideLoading();
+      alert("Status berjaya dikemaskini!");
+      switchTab('dashboard');
+      loadApplications();
+    } catch(err) {
+      hideLoading();
+      alert("Ralat: " + err.message);
+    }
+  }
+
+  function openPaymentModal(appId) {
+    document.getElementById('payAppId').value = appId;
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+  }
+
+  async function submitPayment() {
+    const appId = document.getElementById('payAppId').value;
+    const fileInput = document.getElementById('payReceiptFile').files[0];
+    if (!fileInput) return alert("Sila pilih resit pembayaran!");
+
+    showLoading("Muat naik resit...");
+    try {
+      const receiptUrl = await uploadFileToFirebase(fileInput, "payment_receipts");
+      await db.collection("applications").doc(appId).update({
+        status: "Dalam Pembayaran",
+        paymentReceiptUrl: receiptUrl,
+        paymentDate: new Date().toISOString()
+      });
+      hideLoading();
+      alert("Resit berjaya dimuat naik!");
+      bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+      loadApplications();
+    } catch(err) {
+      hideLoading();
+      alert("Ralat: " + err.message);
+    }
   }
 </script>
 </body>
