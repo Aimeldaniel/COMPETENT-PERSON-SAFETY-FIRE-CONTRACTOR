@@ -23,7 +23,7 @@
     
     #loadingOverlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(15, 23, 42, 0.8); display: none; justify-content: center;
+      background: rgba(15, 23, 42, 0.85); display: none; justify-content: center;
       align-items: center; z-index: 9999; color: white; flex-direction: column;
     }
   </style>
@@ -180,7 +180,7 @@
               </div>
             </div>
 
-            <!-- 2. KATEGORI PERAKUAN (WITH AUTO-TICK) -->
+            <!-- 2. KATEGORI PERAKUAN -->
             <div class="card card-custom p-4 bg-white mb-4">
               <h5 class="fw-bold border-bottom pb-2">2. Kategori Perakuan Orang Kompeten</h5>
               <div class="form-check mt-2">
@@ -208,7 +208,7 @@
               </div>
             </div>
 
-            <!-- 3. KELAYAKAN AKADEMIK & SIJIL KOMPETENSI -->
+            <!-- 3. KELAYAKAN AKADEMIK -->
             <div class="card card-custom p-4 bg-white mb-4">
               <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                 <h5 class="fw-bold m-0">3. Kelayakan Akademik & Lampiran Sijil</h5>
@@ -262,7 +262,7 @@
               </div>
             </div>
 
-            <!-- 4. PENGALAMAN KERJA (1 PENGALAMAN = 1 SURAT MAJIKAN) -->
+            <!-- 4. PENGALAMAN KERJA -->
             <div class="card card-custom p-4 bg-white mb-4">
               <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                 <h5 class="fw-bold m-0">4. Senarai Pengalaman Kerja & Surat Pengesahan Majikan</h5>
@@ -303,7 +303,7 @@
           </form>
         </div>
 
-        <!-- 5. TAB SEMAKAN PEGAWAI (PEGAWAI 1 & 2) -->
+        <!-- 5. TAB SEMAKAN PEGAWAI -->
         <div id="tabPegawaiReview" style="display:none;">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="fw-bold m-0">Semakan & Kelulusan Permohonan</h4>
@@ -389,19 +389,18 @@
 
 <script>
   // =========================================================
-  // 1. KONFIGURASI FIREBASE (GANTIKAN DENGAN KUNCI ANDA)
+  // 1. KONFIGURASI FIREBASE
   // =========================================================
   const firebaseConfig = {
-  apiKey: "AIzaSyCSiKHGk5_3VZM1TGunlWiFQGBzklJLueE",
-  authDomain: "bomba-cp-system.firebaseapp.com",
-  projectId: "bomba-cp-system",
-  storageBucket: "bomba-cp-system.firebasestorage.app",
-  messagingSenderId: "243345828686",
-  appId: "1:243345828686:web:cc7062090d19b8388b4c1f",
-  measurementId: "G-M98CCK3KXS"
-};
+    apiKey: "AIzaSyCSiKHGk5_3VZM1TGunlWiFQGBzklJLueE",
+    authDomain: "bomba-cp-system.firebaseapp.com",
+    projectId: "bomba-cp-system",
+    storageBucket: "bomba-cp-system.firebasestorage.app",
+    messagingSenderId: "243345828686",
+    appId: "1:243345828686:web:cc7062090d19b8388b4c1f",
+    measurementId: "G-M98CCK3KXS"
+  };
 
-  // Inisialisasi Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
@@ -420,7 +419,7 @@
   }
 
   // =========================================================
-  // 2. PEMERIKSAAN AUTH & ROLES
+  // 2. AUTHENTICATION & PROFIL
   // =========================================================
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -522,7 +521,7 @@
   }
 
   // =========================================================
-  // 3. AUTO-TICK CHECKBOX & JADUAL DINAMIK
+  // 3. CHECKBOX & BORANG DINAMIK
   // =========================================================
   function initCheckboxListeners() {
     const catMekanikal = document.getElementById('catMekanikal');
@@ -612,66 +611,159 @@
     if(tab === 'permohonan') document.getElementById('navPermohonan').classList.add('active');
   }
 
-  // Helper Muat Naik Fail Ke Firebase Storage
-  async function uploadFileToFirebase(file, path) {
+  // =========================================================
+  // 4. MUAT NAIK PANTAS (PARALLEL + AUTO COMPRESSION)
+  // =========================================================
+  
+  // Helper: Mengecilkan Imej Secara Otomatik di Browser (Fast Upload)
+  function compressImageIfNeeded(file) {
+    return new Promise((resolve) => {
+      if (!file || !file.type.startsWith('image/')) return resolve(file);
+      
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          const maxDim = 1200; // Had saiz maksimum piksel
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file);
+            }
+          }, 'image/jpeg', 0.7); // 70% Quality Compression
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  }
+
+  // Helper: Single File Upload Promise
+  async function uploadSingleFile(file, path) {
     if (!file) return "";
-    const storageRef = storage.ref(`${path}/${Date.now()}_${file.name}`);
-    const snapshot = await storageRef.put(file);
+    const processedFile = await compressImageIfNeeded(file);
+    const storageRef = storage.ref(`${path}/${Date.now()}_${processedFile.name}`);
+    const snapshot = await storageRef.put(processedFile);
     return await snapshot.ref.getDownloadURL();
   }
 
   // =========================================================
-  // 4. HANTAR BORANG PERMOHONAN KE FIRESTORE & STORAGE
+  // 5. PENYERAHAN BORANG (FAST PARALLEL UPLOAD)
   // =========================================================
   async function handleFormSubmit(e, isDraft) {
     e.preventDefault();
 
     if (!isDraft) {
-      const hasCat = document.getElementById('catMekanikal').checked || document.getElementById('catAwam').checked || document.getElementById('catPemasangan').checked;
+      const hasCat = document.getElementById('catMekanikal').checked || 
+                     document.getElementById('catAwam').checked || 
+                     document.getElementById('catPemasangan').checked;
       if (!hasCat) return alert("Sila pilih sekurang-kurangnya SATU Kategori Perakuan!");
     }
 
-    showLoading("Muat naik dokumen & menyimpan permohonan...");
+    showLoading("Memuat naik fail & menyimpan permohonan...");
 
     try {
-      // 1. Upload Fail IC
-      const icFile = document.getElementById('appFileIc').files[0];
-      const icUrl = await uploadFileToFirebase(icFile, "ic_documents");
+      const uploadTasks = [];
 
-      // 2. Upload Academic Files
-      const academicData = [];
+      // 1. Task Upload IC
+      const icInput = document.getElementById('appFileIc');
+      const icFile = (icInput && icInput.files.length > 0) ? icInput.files[0] : null;
+      uploadTasks.push(uploadSingleFile(icFile, "ic_documents"));
+
+      // 2. Task Upload Academic
+      const academicMeta = [];
       const acadRows = document.querySelectorAll('#acadTableBody tr');
-      for (let tr of acadRows) {
+      acadRows.forEach(tr => {
         const level = tr.querySelector('.acad-level').value;
         const inst = tr.querySelector('.acad-inst').value;
         const year = tr.querySelector('.acad-year').value;
-        const fileInput = tr.querySelector('.acad-file').files[0];
-        const fileUrl = await uploadFileToFirebase(fileInput, "academic_documents");
-        if (inst && year) academicData.push({ level, inst, year, fileUrl });
-      }
+        const fileInputEl = tr.querySelector('.acad-file');
+        const file = (fileInputEl && fileInputEl.files.length > 0) ? fileInputEl.files[0] : null;
+        
+        if (inst && year) {
+          academicMeta.push({ level, inst, year });
+          uploadTasks.push(uploadSingleFile(file, "academic_documents"));
+        }
+      });
 
-      // 3. Upload Sijil Kompetensi
-      const certCompData = [];
+      // 3. Task Upload Sijil Kompetensi
+      const certMeta = [];
       const certRows = document.querySelectorAll('.cert-row');
-      for (let row of certRows) {
+      certRows.forEach(row => {
         const title = row.querySelector('.cert-title').value;
-        const fileInput = row.querySelector('.cert-file').files[0];
-        const fileUrl = await uploadFileToFirebase(fileInput, "competency_certificates");
-        if (title || fileUrl) certCompData.push({ title, fileUrl });
-      }
+        const fileInputEl = row.querySelector('.cert-file');
+        const file = (fileInputEl && fileInputEl.files.length > 0) ? fileInputEl.files[0] : null;
+        
+        if (title || file) {
+          certMeta.push({ title });
+          uploadTasks.push(uploadSingleFile(file, "competency_certificates"));
+        }
+      });
 
-      // 4. Upload Pengalaman Kerja & Surat Majikan
-      const workExpData = [];
+      // 4. Task Upload Pengalaman Kerja & Surat
+      const workMeta = [];
       const workRows = document.querySelectorAll('#workTableBody tr');
-      for (let tr of workRows) {
+      workRows.forEach(tr => {
         const company = tr.querySelector('.exp-company').value;
         const desc = tr.querySelector('.exp-desc').value;
         const start = tr.querySelector('.exp-start').value;
         const end = tr.querySelector('.exp-end').value;
-        const fileInput = tr.querySelector('.exp-file').files[0];
-        const letterUrl = await uploadFileToFirebase(fileInput, "employer_letters");
-        if (company) workExpData.push({ company, desc, start, end, letterUrl });
-      }
+        const fileInputEl = tr.querySelector('.exp-file');
+        const file = (fileInputEl && fileInputEl.files.length > 0) ? fileInputEl.files[0] : null;
+
+        if (company) {
+          workMeta.push({ company, desc, start, end });
+          uploadTasks.push(uploadSingleFile(file, "employer_letters"));
+        }
+      });
+
+      // LAKUKAN SEMUA MUAT NAIK FAIL SERENTAK (PARALLEL PROMISE)
+      const uploadResults = await Promise.all(uploadTasks);
+
+      // KUMPULKAN URLs KEPADA STRUKTUR DATA
+      let resultIndex = 0;
+      const icUrl = uploadResults[resultIndex++];
+
+      const academicData = academicMeta.map(meta => ({
+        ...meta,
+        fileUrl: uploadResults[resultIndex++]
+      }));
+
+      const certCompData = certMeta.map(meta => ({
+        ...meta,
+        fileUrl: uploadResults[resultIndex++]
+      }));
+
+      const workExpData = workMeta.map(meta => ({
+        ...meta,
+        letterUrl: uploadResults[resultIndex++]
+      }));
 
       // Jana App ID (C1-CPFSC0001)
       const appRef = db.collection("applications");
@@ -720,7 +812,7 @@
   }
 
   // =========================================================
-  // 5. MUAT TURUN SENARAI PERMOHONAN REAL-TIME
+  // 6. SENARAI PERMOHONAN REAL-TIME
   // =========================================================
   async function loadApplications() {
     showLoading("Memuatkan senarai permohonan...");
@@ -854,12 +946,13 @@
 
   async function submitPayment() {
     const appId = document.getElementById('payAppId').value;
-    const fileInput = document.getElementById('payReceiptFile').files[0];
+    const fileInputEl = document.getElementById('payReceiptFile');
+    const fileInput = (fileInputEl && fileInputEl.files.length > 0) ? fileInputEl.files[0] : null;
     if (!fileInput) return alert("Sila pilih resit pembayaran!");
 
     showLoading("Muat naik resit...");
     try {
-      const receiptUrl = await uploadFileToFirebase(fileInput, "payment_receipts");
+      const receiptUrl = await uploadSingleFile(fileInput, "payment_receipts");
       await db.collection("applications").doc(appId).update({
         status: "Dalam Pembayaran",
         paymentReceiptUrl: receiptUrl,
