@@ -45,7 +45,7 @@
           <div class="text-center mb-4">
             <i class="bi bi-fire text-danger display-4"></i>
             <h4 class="fw-bold mt-2">Sistem Competent Person</h4>
-            <p class="text-muted small">Fire Safety Contractor Registration (Firebase)</p>
+            <p class="text-muted small">Fire Safety Contractor Registration (Supabase)</p>
           </div>
 
           <!-- LOGIN FORM -->
@@ -381,30 +381,17 @@
 <!-- BOOTSTRAP JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- FIREBASE SDK V9 (MODULAR COMPAT) -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<!-- SUPABASE SDK JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
   // =========================================================
-  // 1. KONFIGURASI FIREBASE
+  // 1. KONFIGURASI SUPABASE (GANTIKAN KUNCI ANDA DI SINI)
   // =========================================================
-  const firebaseConfig = {
-    apiKey: "AIzaSyCSiKHGk5_3VZM1TGunlWiFQGBzklJLueE",
-    authDomain: "bomba-cp-system.firebaseapp.com",
-    projectId: "bomba-cp-system",
-    storageBucket: "bomba-cp-system.firebasestorage.app",
-    messagingSenderId: "243345828686",
-    appId: "1:243345828686:web:cc7062090d19b8388b4c1f",
-    measurementId: "G-M98CCK3KXS"
-  };
+  const SUPABASE_URL = "https://twbpcrxqsytkycdjeckj.supabase.co/rest/v1/";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3YnBjcnhxc3l0a3ljZGplY2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzNDQ1OTgsImV4cCI6MjEwMTkyMDU5OH0.whc-dAFCZSl6SoBHjSWentoUz20yCvLonyyFTsCQRHc";
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-  const storage = firebase.storage();
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let currentUserData = null;
   let currentReviewApp = null;
@@ -418,29 +405,12 @@
     document.getElementById('loadingOverlay').style.display = 'none';
   }
 
-  // =========================================================
-  // 2. AUTHENTICATION & PROFIL
-  // =========================================================
-  auth.onAuthStateChanged(async (user) => {
-    if (user) {
-      showLoading("Memuatkan profil...");
-      try {
-        const doc = await db.collection("users").doc(user.uid).get();
-        if (doc.exists) {
-          currentUserData = { uid: user.uid, email: user.email, ...doc.data() };
-          initDashboard();
-        } else {
-          alert("Profil pengguna tidak ditemui!");
-          handleLogout();
-        }
-      } catch (err) {
-        alert("Ralat memuatkan profil: " + err.message);
-        hideLoading();
-      }
-    } else {
-      document.getElementById('authSection').style.display = 'block';
-      document.getElementById('mainDashboard').style.display = 'none';
-      hideLoading();
+  // Check Login Sesi
+  window.addEventListener('DOMContentLoaded', () => {
+    const savedUser = localStorage.getItem('supabase_cp_user');
+    if (savedUser) {
+      currentUserData = JSON.parse(savedUser);
+      initDashboard();
     }
   });
 
@@ -448,14 +418,14 @@
     document.getElementById('authSection').style.display = 'none';
     document.getElementById('mainDashboard').style.display = 'block';
     
-    document.getElementById('userRoleBadge').innerText = `Pengguna: ${currentUserData.fullName} (${currentUserData.role.toUpperCase()})`;
+    document.getElementById('userRoleBadge').innerText = `Pengguna: ${currentUserData.full_name} (${currentUserData.role.toUpperCase()})`;
 
     const menuPermohonan = document.getElementById('menuPermohonan');
 
     if (currentUserData.role === 'awam') {
       if (menuPermohonan) menuPermohonan.style.display = 'block';
-      document.getElementById('appFullName').value = currentUserData.fullName || '';
-      document.getElementById('appIcNo').value = currentUserData.icNo || '';
+      document.getElementById('appFullName').value = currentUserData.full_name || '';
+      document.getElementById('appIcNo').value = currentUserData.ic_no || '';
     } else {
       if (menuPermohonan) menuPermohonan.style.display = 'none';
     }
@@ -478,11 +448,23 @@
   async function handleLogin(e) {
     e.preventDefault();
     showLoading("Menyemak log masuk...");
-    const email = document.getElementById('loginEmail').value;
-    const pass = document.getElementById('loginPassword').value;
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value.trim();
 
     try {
-      await auth.signInWithEmailAndPassword(email, pass);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('password', pass)
+        .single();
+
+      hideLoading();
+      if (error || !data) return alert("Emel atau kata laluan tidak sah!");
+
+      currentUserData = data;
+      localStorage.setItem('supabase_cp_user', JSON.stringify(data));
+      initDashboard();
     } catch (err) {
       hideLoading();
       alert("Ralat Log Masuk: " + err.message);
@@ -495,21 +477,19 @@
 
     const fullName = document.getElementById('regName').value;
     const icNo = document.getElementById('regIc').value;
-    const email = document.getElementById('regEmail').value;
+    const email = document.getElementById('regEmail').value.trim();
     const pass = document.getElementById('regPass').value;
 
     try {
-      const res = await auth.createUserWithEmailAndPassword(email, pass);
-      await db.collection("users").doc(res.user.uid).set({
-        fullName: fullName,
-        icNo: icNo,
-        email: email,
-        role: "awam",
-        status: "Aktif",
-        createdAt: new Date().toISOString()
-      });
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{ full_name: fullName, ic_no: icNo, email: email, password: pass, role: 'awam', status: 'Aktif' }]);
+
       hideLoading();
-      alert("Pendaftaran berjaya!");
+      if (error) return alert("Ralat Pendaftaran: " + error.message);
+
+      alert("Pendaftaran berjaya! Sila log masuk.");
+      toggleAuth('login');
     } catch (err) {
       hideLoading();
       alert("Ralat Pendaftaran: " + err.message);
@@ -517,273 +497,96 @@
   }
 
   function handleLogout() {
-    auth.signOut();
+    localStorage.removeItem('supabase_cp_user');
+    currentUserData = null;
+    document.getElementById('authSection').style.display = 'block';
+    document.getElementById('mainDashboard').style.display = 'none';
   }
 
   // =========================================================
-  // 3. CHECKBOX & BORANG DINAMIK
+  // HELPER MUAT NAIK FAIL KE SUPABASE STORAGE (FAST)
   // =========================================================
-  function initCheckboxListeners() {
-    const catMekanikal = document.getElementById('catMekanikal');
-    const subsMekanikal = document.querySelectorAll('.sub-mekanikal');
-    subsMekanikal.forEach(sub => {
-      sub.addEventListener('change', function() { if (this.checked && catMekanikal) catMekanikal.checked = true; });
-    });
-    if (catMekanikal) {
-      catMekanikal.addEventListener('change', function() { if (!this.checked) subsMekanikal.forEach(s => s.checked = false); });
-    }
-
-    const catPemasangan = document.getElementById('catPemasangan');
-    const subsPemasangan = document.querySelectorAll('.sub-pemasangan');
-    subsPemasangan.forEach(sub => {
-      sub.addEventListener('change', function() { if (this.checked && catPemasangan) catPemasangan.checked = true; });
-    });
-    if (catPemasangan) {
-      catPemasangan.addEventListener('change', function() { if (!this.checked) subsPemasangan.forEach(s => s.checked = false); });
-    }
-  }
-
-  function addAcadRow() {
-    const tbody = document.getElementById('acadTableBody');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>
-        <select class="form-select acad-level" required>
-          <option value="Diploma">Diploma</option>
-          <option value="Ijazah Sarjana Muda">Ijazah Sarjana Muda</option>
-          <option value="Sarjana (Master)">Sarjana (Master)</option>
-          <option value="PhD">PhD</option>
-          <option value="Lain-lain">Lain-lain</option>
-        </select>
-      </td>
-      <td><input type="text" class="form-control acad-inst" placeholder="Nama Institusi / Kolej" required></td>
-      <td><input type="number" class="form-control acad-year" placeholder="YYYY" required></td>
-      <td><input type="file" class="form-control acad-file" accept="image/*,application/pdf"></td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
-    `;
-    tbody.appendChild(tr);
-  }
-
-  function addCertRow() {
-    const container = document.getElementById('certContainer');
-    const count = container.querySelectorAll('.cert-row').length + 1;
-    const div = document.createElement('div');
-    div.className = "row g-2 mb-2 cert-row";
-    div.innerHTML = `
-      <div class="col-md-5"><input type="text" class="form-control cert-title" placeholder="Nama Sijil / Kursus Kompetensi ${count}"></div>
-      <div class="col-md-6"><input type="file" class="form-control cert-file" accept="image/*,application/pdf"></div>
-      <div class="col-md-1 text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCertRow(this)"><i class="bi bi-trash"></i></button></div>
-    `;
-    container.appendChild(div);
-  }
-
-  function removeCertRow(btn) {
-    const rows = document.querySelectorAll('.cert-row');
-    if (rows.length > 1) btn.closest('.cert-row').remove();
-    else alert("Sekurang-kurangnya satu ruangan sijil diperlukan.");
-  }
-
-  function addWorkRow() {
-    const tbody = document.getElementById('workTableBody');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input type="text" class="form-control exp-company"></td>
-      <td><input type="text" class="form-control exp-desc"></td>
-      <td><input type="text" class="form-control exp-start" placeholder="YYYY"></td>
-      <td><input type="text" class="form-control exp-end" placeholder="YYYY / Present"></td>
-      <td><input type="file" class="form-control exp-file" accept="image/*,application/pdf"></td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
-    `;
-    tbody.appendChild(tr);
-  }
-
-  function removeRow(btn) {
-    if (btn && btn.closest('tr')) btn.closest('tr').remove();
-  }
-
-  function switchTab(tab) {
-    document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
-    document.getElementById('tabDashboard').style.display = (tab === 'dashboard') ? 'block' : 'none';
-    document.getElementById('tabPermohonan').style.display = (tab === 'permohonan') ? 'block' : 'none';
-    document.getElementById('tabPegawaiReview').style.display = (tab === 'pegawaiReview') ? 'block' : 'none';
-
-    if(tab === 'dashboard') document.getElementById('navDashboard').classList.add('active');
-    if(tab === 'permohonan') document.getElementById('navPermohonan').classList.add('active');
-  }
-
-  // =========================================================
-  // 4. MUAT NAIK PANTAS (PARALLEL + AUTO COMPRESSION)
-  // =========================================================
-  
-  // Helper: Mengecilkan Imej Secara Otomatik di Browser (Fast Upload)
-  function compressImageIfNeeded(file) {
-    return new Promise((resolve) => {
-      if (!file || !file.type.startsWith('image/')) return resolve(file);
-      
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          const maxDim = 1200; // Had saiz maksimum piksel
-          if (width > maxDim || height > maxDim) {
-            if (width > height) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
-            } else {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-              });
-              resolve(compressedFile);
-            } else {
-              resolve(file);
-            }
-          }, 'image/jpeg', 0.7); // 70% Quality Compression
-        };
-        img.onerror = () => resolve(file);
-      };
-      reader.onerror = () => resolve(file);
-    });
-  }
-
-  // Helper: Single File Upload Promise
-  async function uploadSingleFile(file, path) {
+  async function uploadFileToSupabase(file, folderName) {
     if (!file) return "";
-    const processedFile = await compressImageIfNeeded(file);
-    const storageRef = storage.ref(`${path}/${Date.now()}_${processedFile.name}`);
-    const snapshot = await storageRef.put(processedFile);
-    return await snapshot.ref.getDownloadURL();
+    
+    const fileName = `${folderName}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+    const { data, error } = await supabase.storage.from('attachments').upload(fileName, file);
+
+    if (error) throw error;
+
+    const { data: publicUrlData } = supabase.storage.from('attachments').getPublicUrl(fileName);
+    return publicUrlData.publicUrl;
   }
 
   // =========================================================
-  // 5. PENYERAHAN BORANG (FAST PARALLEL UPLOAD)
+  // PENYERAHAN BORANG PERMOHONAN
   // =========================================================
   async function handleFormSubmit(e, isDraft) {
     e.preventDefault();
 
     if (!isDraft) {
-      const hasCat = document.getElementById('catMekanikal').checked || 
-                     document.getElementById('catAwam').checked || 
-                     document.getElementById('catPemasangan').checked;
+      const hasCat = document.getElementById('catMekanikal').checked || document.getElementById('catAwam').checked || document.getElementById('catPemasangan').checked;
       if (!hasCat) return alert("Sila pilih sekurang-kurangnya SATU Kategori Perakuan!");
     }
 
-    showLoading("Memuat naik fail & menyimpan permohonan...");
+    showLoading("Memuat naik fail & menyimpan...");
 
     try {
-      const uploadTasks = [];
+      // 1. Muat Naik Fail IC
+      const icFile = document.getElementById('appFileIc').files[0];
+      const icUrl = await uploadFileToSupabase(icFile, "ic_documents");
 
-      // 1. Task Upload IC
-      const icInput = document.getElementById('appFileIc');
-      const icFile = (icInput && icInput.files.length > 0) ? icInput.files[0] : null;
-      uploadTasks.push(uploadSingleFile(icFile, "ic_documents"));
-
-      // 2. Task Upload Academic
-      const academicMeta = [];
+      // 2. Academic
+      const academicData = [];
       const acadRows = document.querySelectorAll('#acadTableBody tr');
-      acadRows.forEach(tr => {
+      for (let tr of acadRows) {
         const level = tr.querySelector('.acad-level').value;
         const inst = tr.querySelector('.acad-inst').value;
         const year = tr.querySelector('.acad-year').value;
-        const fileInputEl = tr.querySelector('.acad-file');
-        const file = (fileInputEl && fileInputEl.files.length > 0) ? fileInputEl.files[0] : null;
-        
-        if (inst && year) {
-          academicMeta.push({ level, inst, year });
-          uploadTasks.push(uploadSingleFile(file, "academic_documents"));
-        }
-      });
+        const file = tr.querySelector('.acad-file').files[0];
+        const fileUrl = await uploadFileToSupabase(file, "academic");
+        if (inst && year) academicData.push({ level, inst, year, fileUrl });
+      }
 
-      // 3. Task Upload Sijil Kompetensi
-      const certMeta = [];
+      // 3. Sijil Kompetensi
+      const certCompData = [];
       const certRows = document.querySelectorAll('.cert-row');
-      certRows.forEach(row => {
+      for (let row of certRows) {
         const title = row.querySelector('.cert-title').value;
-        const fileInputEl = row.querySelector('.cert-file');
-        const file = (fileInputEl && fileInputEl.files.length > 0) ? fileInputEl.files[0] : null;
-        
-        if (title || file) {
-          certMeta.push({ title });
-          uploadTasks.push(uploadSingleFile(file, "competency_certificates"));
-        }
-      });
+        const file = row.querySelector('.cert-file').files[0];
+        const fileUrl = await uploadFileToSupabase(file, "competency");
+        if (title || fileUrl) certCompData.push({ title, fileUrl });
+      }
 
-      // 4. Task Upload Pengalaman Kerja & Surat
-      const workMeta = [];
+      // 4. Pengalaman Kerja
+      const workExpData = [];
       const workRows = document.querySelectorAll('#workTableBody tr');
-      workRows.forEach(tr => {
+      for (let tr of workRows) {
         const company = tr.querySelector('.exp-company').value;
         const desc = tr.querySelector('.exp-desc').value;
         const start = tr.querySelector('.exp-start').value;
         const end = tr.querySelector('.exp-end').value;
-        const fileInputEl = tr.querySelector('.exp-file');
-        const file = (fileInputEl && fileInputEl.files.length > 0) ? fileInputEl.files[0] : null;
+        const file = tr.querySelector('.exp-file').files[0];
+        const letterUrl = await uploadFileToSupabase(file, "employer_letters");
+        if (company) workExpData.push({ company, desc, start, end, letterUrl });
+      }
 
-        if (company) {
-          workMeta.push({ company, desc, start, end });
-          uploadTasks.push(uploadSingleFile(file, "employer_letters"));
-        }
-      });
-
-      // LAKUKAN SEMUA MUAT NAIK FAIL SERENTAK (PARALLEL PROMISE)
-      const uploadResults = await Promise.all(uploadTasks);
-
-      // KUMPULKAN URLs KEPADA STRUKTUR DATA
-      let resultIndex = 0;
-      const icUrl = uploadResults[resultIndex++];
-
-      const academicData = academicMeta.map(meta => ({
-        ...meta,
-        fileUrl: uploadResults[resultIndex++]
-      }));
-
-      const certCompData = certMeta.map(meta => ({
-        ...meta,
-        fileUrl: uploadResults[resultIndex++]
-      }));
-
-      const workExpData = workMeta.map(meta => ({
-        ...meta,
-        letterUrl: uploadResults[resultIndex++]
-      }));
-
-      // Jana App ID (C1-CPFSC0001)
-      const appRef = db.collection("applications");
-      const snapshot = await appRef.get();
-      const nextNo = String(snapshot.size + 1).padStart(4, '0');
-      const appId = "C1-CPFSC" + nextNo;
+      // Auto-Increment App ID
+      const { count } = await supabase.from('applications').select('*', { count: 'exact', head: true });
+      const appId = "C1-CPFSC" + String((count || 0) + 1).padStart(4, '0');
 
       const payload = {
-        appId: appId,
-        uid: currentUserData.uid,
-        userEmail: currentUserData.email,
-        fullName: document.getElementById('appFullName').value,
-        icNo: document.getElementById('appIcNo').value,
-        icUrl: icUrl,
+        app_id: appId,
+        user_email: currentUserData.email,
+        full_name: document.getElementById('appFullName').value,
+        ic_no: document.getElementById('appIcNo').value,
+        ic_url: icUrl,
         gender: document.getElementById('appGender').value,
         dob: document.getElementById('appDob').value,
         phone: document.getElementById('appPhone').value,
         address: document.getElementById('appAddress').value,
         status: isDraft ? "Draf" : "Dalam Proses",
-        categoryData: {
+        category_data: {
           mekanikal: document.getElementById('catMekanikal').checked,
           gendela: document.getElementById('subGendela').checked,
           penggera: document.getElementById('subPenggera').checked,
@@ -793,53 +596,54 @@
           gas: document.getElementById('subGas').checked,
           pemadamApi: document.getElementById('subPemadamApi').checked
         },
-        academicData: academicData,
-        certCompData: certCompData,
-        workExpData: workExpData,
-        createdAt: new Date().toISOString()
+        academic_data: academicData,
+        cert_comp_data: certCompData,
+        work_exp_data: workExpData
       };
 
-      await appRef.doc(appId).set(payload);
+      const { error } = await supabase.from('applications').insert([payload]);
+
       hideLoading();
-      alert("Permohonan berjaya dihantar! No ID: " + appId);
+      if (error) return alert("Ralat menyimpan: " + error.message);
+
+      alert("Permohonan berjaya dihantar! ID: " + appId);
       switchTab('dashboard');
       loadApplications();
 
-    } catch (err) {
+    } catch(err) {
       hideLoading();
       alert("Ralat Penyerahan: " + err.message);
     }
   }
 
   // =========================================================
-  // 6. SENARAI PERMOHONAN REAL-TIME
+  // MUAT TURUN REAL-TIME DASHBOARD
   // =========================================================
   async function loadApplications() {
-    showLoading("Memuatkan senarai permohonan...");
+    showLoading("Memuatkan senarai data...");
     const tbody = document.getElementById('applicationTableBody');
     tbody.innerHTML = '';
 
     try {
-      let query = db.collection("applications");
-      
+      let query = supabase.from('applications').select('*');
+
       if (currentUserData.role === 'awam') {
-        query = query.where("userEmail", "==", currentUserData.email);
+        query = query.eq('user_email', currentUserData.email);
       } else if (currentUserData.role === 'pegawai_1') {
-        query = query.where("status", "in", ["Dalam Proses", "Dalam Pembayaran"]);
+        query = query.in('status', ['Dalam Proses', 'Dalam Pembayaran']);
       } else if (currentUserData.role === 'pegawai_2') {
-        query = query.where("status", "in", ["Pembayaran Disahkan", "Kelulusan Pertama (Menunggu Pembayaran)"]);
+        query = query.in('status', ['Pembayaran Disahkan', 'Kelulusan Pertama (Menunggu Pembayaran)']);
       }
 
-      const snapshot = await query.get();
+      const { data, error } = await query;
 
-      if (snapshot.empty) {
+      hideLoading();
+      if (error || !data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Tiada rekod permohonan.</td></tr>';
-        hideLoading();
         return;
       }
 
-      snapshot.forEach(doc => {
-        const item = doc.data();
+      data.forEach(item => {
         let badgeClass = 'badge-draf';
         const st = item.status || 'Draf';
 
@@ -851,25 +655,24 @@
 
         let actionBtns = '';
         if (currentUserData.role === 'pegawai_1' && (st === 'Dalam Proses' || st === 'Dalam Pembayaran')) {
-          actionBtns = `<button class="btn btn-sm btn-primary" onclick="openReviewPage('${item.appId}')"><i class="bi bi-search me-1"></i> Semak & Perakukan</button>`;
+          actionBtns = `<button class="btn btn-sm btn-primary" onclick="openReviewPage('${item.app_id}')"><i class="bi bi-search me-1"></i> Semak & Perakukan</button>`;
         } else if (currentUserData.role === 'pegawai_2' && (st === 'Pembayaran Disahkan' || st.includes('Kelulusan Pertama'))) {
-          actionBtns = `<button class="btn btn-sm btn-success" onclick="openReviewPage('${item.appId}')"><i class="bi bi-check2-square me-1"></i> Semak & Luluskan</button>`;
+          actionBtns = `<button class="btn btn-sm btn-success" onclick="openReviewPage('${item.app_id}')"><i class="bi bi-check2-square me-1"></i> Semak & Luluskan</button>`;
         } else if (currentUserData.role === 'awam' && st.includes('Kelulusan Pertama')) {
-          actionBtns = `<button class="btn btn-sm btn-warning" onclick="openPaymentModal('${item.appId}')"><i class="bi bi-upload me-1"></i> Muat Naik Resit</button>`;
+          actionBtns = `<button class="btn btn-sm btn-warning" onclick="openPaymentModal('${item.app_id}')"><i class="bi bi-upload me-1"></i> Muat Naik Resit</button>`;
         }
 
         tbody.innerHTML += `
           <tr>
-            <td><strong>${item.appId}</strong></td>
-            <td>${item.fullName}<br><small class="text-muted">${item.userEmail}</small></td>
-            <td>${String(item.createdAt).substring(0, 10)}</td>
+            <td><strong>${item.app_id}</strong></td>
+            <td>${item.full_name}<br><small class="text-muted">${item.user_email}</small></td>
+            <td>${String(item.created_at).substring(0, 10)}</td>
             <td><span class="badge ${badgeClass}">${st}</span></td>
             <td>${actionBtns || '<span class="text-muted small">Tiada tindakan</span>'}</td>
           </tr>
         `;
       });
-      hideLoading();
-    } catch (err) {
+    } catch(err) {
       hideLoading();
       alert("Ralat memuatkan data: " + err.message);
     }
@@ -878,33 +681,29 @@
   async function openReviewPage(appId) {
     showLoading("Memuatkan maklumat...");
     try {
-      const doc = await db.collection("applications").doc(appId).get();
-      if (!doc.exists) return alert("Permohonan tidak wujud!");
+      const { data, error } = await supabase.from('applications').select('*').eq('app_id', appId).single();
+      if (error || !data) return alert("Permohonan tidak dijumpai!");
 
-      currentReviewApp = doc.data();
+      currentReviewApp = data;
 
-      document.getElementById('revAppId').innerText = `No. Permohonan: ${currentReviewApp.appId}`;
-      document.getElementById('revStatus').innerText = `Status: ${currentReviewApp.status}`;
-      document.getElementById('revFullName').innerText = currentReviewApp.fullName;
-      document.getElementById('revIcNo').innerText = currentReviewApp.icNo;
-      document.getElementById('revEmail').innerText = currentReviewApp.userEmail;
-      document.getElementById('revPhone').innerText = currentReviewApp.phone;
-      document.getElementById('revGenderDob').innerText = `${currentReviewApp.gender} / ${currentReviewApp.dob}`;
-      document.getElementById('revAddress').innerText = currentReviewApp.address;
+      document.getElementById('revAppId').innerText = `No. Permohonan: ${data.app_id}`;
+      document.getElementById('revStatus').innerText = `Status: ${data.status}`;
+      document.getElementById('revFullName').innerText = data.full_name;
+      document.getElementById('revIcNo').innerText = data.ic_no;
+      document.getElementById('revEmail').innerText = data.user_email;
+      document.getElementById('revPhone').innerText = data.phone;
+      document.getElementById('revGenderDob').innerText = `${data.gender} / ${data.dob}`;
+      document.getElementById('revAddress').innerText = data.address;
 
       const attachDiv = document.getElementById('revAttachments');
       attachDiv.innerHTML = '';
 
-      if(currentReviewApp.icUrl) {
-        attachDiv.innerHTML += `<div class="col-md-4"><div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center"><span>Salinan IC</span><a href="${currentReviewApp.icUrl}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a></div></div>`;
-      }
-      if(currentReviewApp.paymentReceiptUrl) {
-        attachDiv.innerHTML += `<div class="col-md-4"><div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center"><span>Resit Pembayaran</span><a href="${currentReviewApp.paymentReceiptUrl}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a></div></div>`;
-      }
+      if(data.ic_url) attachDiv.innerHTML += `<div class="col-md-4"><div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center"><span>Salinan IC</span><a href="${data.ic_url}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a></div></div>`;
+      if(data.payment_receipt_url) attachDiv.innerHTML += `<div class="col-md-4"><div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center"><span>Resit Pembayaran</span><a href="${data.payment_receipt_url}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a></div></div>`;
 
       hideLoading();
       switchTab('pegawaiReview');
-    } catch (err) {
+    } catch(err) {
       hideLoading();
       alert("Ralat: " + err.message);
     }
@@ -924,11 +723,13 @@
     }
 
     try {
-      await db.collection("applications").doc(currentReviewApp.appId).update({
+      await supabase.from('applications').update({
         status: nextStatus,
-        reviewText: reviewText,
-        updatedAt: new Date().toISOString()
-      });
+        pegawai_1_review: currentUserData.role === 'pegawai_1' ? reviewText : undefined,
+        pegawai_2_review: currentUserData.role === 'pegawai_2' ? reviewText : undefined,
+        updated_at: new Date().toISOString()
+      }).eq('app_id', currentReviewApp.app_id);
+
       hideLoading();
       alert("Status berjaya dikemaskini!");
       switchTab('dashboard');
@@ -946,18 +747,19 @@
 
   async function submitPayment() {
     const appId = document.getElementById('payAppId').value;
-    const fileInputEl = document.getElementById('payReceiptFile');
-    const fileInput = (fileInputEl && fileInputEl.files.length > 0) ? fileInputEl.files[0] : null;
-    if (!fileInput) return alert("Sila pilih resit pembayaran!");
+    const file = document.getElementById('payReceiptFile').files[0];
+    if (!file) return alert("Sila pilih resit pembayaran!");
 
     showLoading("Muat naik resit...");
     try {
-      const receiptUrl = await uploadSingleFile(fileInput, "payment_receipts");
-      await db.collection("applications").doc(appId).update({
+      const receiptUrl = await uploadFileToSupabase(file, "receipts");
+      await supabase.from('applications').update({
         status: "Dalam Pembayaran",
-        paymentReceiptUrl: receiptUrl,
-        paymentDate: new Date().toISOString()
-      });
+        payment_receipt_url: receiptUrl,
+        payment_date: new Date().toISOString(),
+        payment_status: "Sudah Bayar"
+      }).eq('app_id', appId);
+
       hideLoading();
       alert("Resit berjaya dimuat naik!");
       bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
@@ -966,6 +768,74 @@
       hideLoading();
       alert("Ralat: " + err.message);
     }
+  }
+
+  // Checkbox auto-tick & Dynamic Row Logic
+  function initCheckboxListeners() {
+    const catMekanikal = document.getElementById('catMekanikal');
+    const subsMekanikal = document.querySelectorAll('.sub-mekanikal');
+    subsMekanikal.forEach(sub => sub.addEventListener('change', function() { if (this.checked && catMekanikal) catMekanikal.checked = true; }));
+
+    const catPemasangan = document.getElementById('catPemasangan');
+    const subsPemasangan = document.querySelectorAll('.sub-pemasangan');
+    subsPemasangan.forEach(sub => sub.addEventListener('change', function() { if (this.checked && catPemasangan) catPemasangan.checked = true; }));
+  }
+
+  function addAcadRow() {
+    const tbody = document.getElementById('acadTableBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><select class="form-select acad-level" required><option value="Diploma">Diploma</option><option value="Ijazah Sarjana Muda">Ijazah Sarjana Muda</option><option value="Sarjana (Master)">Sarjana (Master)</option><option value="PhD">PhD</option><option value="Lain-lain">Lain-lain</option></select></td>
+      <td><input type="text" class="form-control acad-inst" placeholder="Nama Institusi" required></td>
+      <td><input type="number" class="form-control acad-year" placeholder="YYYY" required></td>
+      <td><input type="file" class="form-control acad-file" accept="image/*,application/pdf"></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function addCertRow() {
+    const container = document.getElementById('certContainer');
+    const count = container.querySelectorAll('.cert-row').length + 1;
+    const div = document.createElement('div');
+    div.className = "row g-2 mb-2 cert-row";
+    div.innerHTML = `
+      <div class="col-md-5"><input type="text" class="form-control cert-title" placeholder="Nama Sijil / Kursus ${count}"></div>
+      <div class="col-md-6"><input type="file" class="form-control cert-file" accept="image/*,application/pdf"></div>
+      <div class="col-md-1 text-center"><button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCertRow(this)"><i class="bi bi-trash"></i></button></div>
+    `;
+    container.appendChild(div);
+  }
+
+  function removeCertRow(btn) {
+    const rows = document.querySelectorAll('.cert-row');
+    if (rows.length > 1) btn.closest('.cert-row').remove();
+  }
+
+  function addWorkRow() {
+    const tbody = document.getElementById('workTableBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="form-control exp-company"></td>
+      <td><input type="text" class="form-control exp-desc"></td>
+      <td><input type="text" class="form-control exp-start" placeholder="YYYY"></td>
+      <td><input type="text" class="form-control exp-end" placeholder="YYYY / Present"></td>
+      <td><input type="file" class="form-control exp-file" accept="image/*,application/pdf"></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)"><i class="bi bi-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function removeRow(btn) { if (btn && btn.closest('tr')) btn.closest('tr').remove(); }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
+    document.getElementById('tabDashboard').style.display = (tab === 'dashboard') ? 'block' : 'none';
+    document.getElementById('tabPermohonan').style.display = (tab === 'permohonan') ? 'block' : 'none';
+    document.getElementById('tabPegawaiReview').style.display = (tab === 'pegawaiReview') ? 'block' : 'none';
+
+    if(tab === 'dashboard') document.getElementById('navDashboard').classList.add('active');
+    if(tab === 'permohonan') document.getElementById('navPermohonan').classList.add('active');
   }
 </script>
 </body>
